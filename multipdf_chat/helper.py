@@ -1,6 +1,6 @@
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from PyPDF2 import PdfReader
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+# from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.prompts import PromptTemplate
@@ -14,14 +14,19 @@ import tempfile
 import logging
 import watchtower 
 import os 
+import io
 
 def get_pdf_texts(pdf_docs):
     text = ""
     for pdf in pdf_docs:
-        # print(pdf)
-        pdf_reader = PdfReader(pdf)
+        # pdf_reader = PdfReader(pdf)
+        # Read file bytes 
+        pdf_bytes = pdf.file.read()
+        pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
         for page in pdf_reader.pages:
             text += page.extract_text()
+        # Reset pointer - important if file is read again 
+        pdf.file.seek(0)
     return text
 
 def get_text_chunks(text):
