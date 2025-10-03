@@ -1,11 +1,12 @@
-Options for lambda with large deps (should be <50MB zipped and <250MB unzipped):
-1. ECR Container images (up to 10GB) - package your Lambda as a Docker image and push it to ECR (Elastic Container Registry). --package-type Image 
-(ECR costs after 500MB free tier) 
+To store dependencies in Lambda layers, note zipped file size should be < 50MB and unzipped file size < 250MB.
 
-2. Store libs in S3 and download into /tmp (512MB - 10GB). But first request may be slow. 
+Options for lambda with large deps:
+    1. ECR Container images (up to 10GB) - package your Lambda as a Docker image and push it to ECR (Elastic Container Registry). --package-type Image 
+    (ECR costs after 500MB free tier) 
+    2. Store libs in S3 and download into /tmp (512MB - 10GB). But first request may be slow. 
 
 Alternatives to Lambda - DockerHub + ECS on EC2 
-1. Push your image to DockerHub and then configure ECS EC2 to pull from DockerHub. 
+Push your image to DockerHub and then configure ECS EC2 to pull from DockerHub. 
 
 ECS on EC2 - advantages:
  - it gives service management (restart if crash)
@@ -15,9 +16,9 @@ ECS on EC2 - advantages:
 EC2 directly - no auto-scaling, need to restart container manually if it crashes, no in built-in load balancer 
 
 
+ECS - cluster, task definition, service 
 
-python -m venv myvenv 
-myvenv/Scripts/activate.bat
-.\myvenv\Scripts\Activate.ps1
-pip install unvicorn
-pip install -r requirements.txt
+EC2 instance has ECS agent running, which does docker pull 
+
+
+
