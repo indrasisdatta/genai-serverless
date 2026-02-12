@@ -16,6 +16,12 @@ import watchtower
 import os 
 import io
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
+S3_STORAGE_ENABLED = os.getenv('S3_STORAGE_ENABLED')
+
 def get_pdf_texts(pdf_docs):
     text = ""
     for pdf in pdf_docs:
@@ -42,7 +48,9 @@ def generate_embedding(chunks, session_id):
     )
     vector_store = FAISS.from_texts(chunks, embedding=embeddings)
     vector_store.save_local(f"faiss_index/{session_id}")
-    upload_faiss_to_s3(f"faiss_index/{session_id}")
+
+    if S3_STORAGE_ENABLED:
+        upload_faiss_to_s3(f"faiss_index/{session_id}")
 
     # put_metric('Embeddings generated', 1)
 
@@ -56,7 +64,7 @@ def get_conversational_chain():
     Answer:\n
     """
 
-    model = ChatGroq(model="Gemma2-9b-It", groq_api_key=os.getenv('GROQ_API_KEY'))
+    model = ChatGroq(model="llama-3.1-8b-instant", groq_api_key=os.getenv('GROQ_API_KEY'))
 
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
 
@@ -72,7 +80,10 @@ def user_input(user_question, session_id):
         model_name="sentence-transformers/all-MiniLM-L6-v2",
         model_kwargs={"device": "cpu"}
     )
-    faiss_folder = download_faiss_from_s3(f"faiss_index/{session_id}")
+    faiss_folder = f"faiss_index/{session_id}"
+    if S3_STORAGE_ENABLED:
+        faiss_folder = download_faiss_from_s3(f"faiss_index/{session_id}")
+    
     vector_store = FAISS.load_local(faiss_folder, embeddings, allow_dangerous_deserialization=True)
     docs = vector_store.similarity_search(user_question)
 
