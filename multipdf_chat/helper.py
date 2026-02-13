@@ -1,7 +1,9 @@
+import asyncio
+from fastapi import Request
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from PyPDF2 import PdfReader
 # from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
-from langchain_huggingface import HuggingFaceEmbeddings
+# from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.prompts import PromptTemplate
 from langchain.chains.question_answering import load_qa_chain
@@ -15,8 +17,8 @@ import logging
 import watchtower 
 import os 
 import io
-
 from dotenv import load_dotenv
+from multipdf_chat.api.StreamingHandler import StreamingHandler
 
 load_dotenv()
 
@@ -40,12 +42,9 @@ def get_text_chunks(text):
     chunks = splitter.split_text(text)
     return chunks 
 
-def generate_embedding(chunks, session_id):
+def generate_embedding(request: Request, chunks, session_id):
     # embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001") 
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"}
-    )
+    embeddings = request.app.state.embeddings
     vector_store = FAISS.from_texts(chunks, embedding=embeddings)
     vector_store.save_local(f"faiss_index/{session_id}")
 
@@ -54,7 +53,7 @@ def generate_embedding(chunks, session_id):
 
     # put_metric('Embeddings generated', 1)
 
-def get_conversational_chain():
+def get_conversational_chain(streaming=False, callbacks=None):
 
     prompt_template = """
     Answer  the question as detailed as possible from the provided context. If answer is not within the provided content, just mention "Content not available".
@@ -64,9 +63,17 @@ def get_conversational_chain():
     Answer:\n
     """
 
-    model = ChatGroq(model="llama-3.1-8b-instant", groq_api_key=os.getenv('GROQ_API_KEY'))
+    model = ChatGroq(
+        model="llama-3.1-8b-instant", 
+        groq_api_key=os.getenv('GROQ_API_KEY'),
+        streaming=streaming,
+        callbacks=callbacks
+    )
 
-    prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
+    prompt = PromptTemplate(
+        template=prompt_template, 
+        input_variables=["context", "question"]
+    )
 
     # Build a ready-made question answering chain on top of your documents and LLM
     qa_chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
@@ -76,10 +83,7 @@ def get_conversational_chain():
 def user_input(user_question, session_id):
     # put_metric('User queries entered', 1)
     # embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001") 
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"}
-    )
+    
     faiss_folder = f"faiss_index/{session_id}"
     if S3_STORAGE_ENABLED:
         faiss_folder = download_faiss_from_s3(f"faiss_index/{session_id}")
@@ -87,7 +91,7 @@ def user_input(user_question, session_id):
     vector_store = FAISS.load_local(faiss_folder, embeddings, allow_dangerous_deserialization=True)
     docs = vector_store.similarity_search(user_question)
 
-    chain = get_conversational_chain()
+    chain = get_conversational_chain(streaming=False, callbacks=None)
 
     response = chain(
         {"input_documents": docs, "question": user_question},
@@ -99,6 +103,49 @@ def user_input(user_question, session_id):
 
     # put_metric('User queries answered', 1)
 
+async def stream_user_input(request: Request, user_question, session_id):
+    # put_metric('User queries entered', 1)
+    # embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001") 
+    embeddings = request.app.state.embeddings
+    faiss_folder = f"faiss_index/{session_id}"
+    if S3_STORAGE_ENABLED:
+        faiss_folder = download_faiss_from_s3(f"faiss_index/{session_id}")
+    
+    vector_store = FAISS.load_local(
+        faiss_folder, embeddings, allow_dangerous_deserialization=True
+    )
+    docs = vector_store.similarity_search(user_question)
+
+    handler = StreamingHandler()
+
+    chain = get_conversational_chain(streaming=True, callbacks=[handler])
+
+    # Run chain in the background
+    asyncio.create_task(
+        chain.ainvoke({
+            "input_documents": docs, 
+            "question": user_question
+        })
+    )
+
+    buffer = ""
+
+    while (True):
+        token = await handler.queue.get() 
+        if token is None: 
+            break
+        if not token or token.strip() == "":
+            continue
+
+        buffer += token 
+        if len(buffer) > 20:
+            yield buffer
+            buffer = "" 
+
+    # put_metric('User queries answered', 1)
+
+    if buffer:
+        yield buffer
 
 def upload_faiss_to_s3(folder):
     bucket_name = os.getenv('AWS_S3_UPLOAD_BUCKET')
