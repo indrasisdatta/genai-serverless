@@ -14,6 +14,8 @@ import os
 import mimetypes
 import tempfile
 import logging
+import sys
+from pythonjsonlogger import jsonlogger
 import watchtower 
 import os 
 import io
@@ -23,6 +25,17 @@ from multipdf_chat.api.StreamingHandler import StreamingHandler
 load_dotenv()
 
 S3_STORAGE_ENABLED = os.getenv('S3_STORAGE_ENABLED')
+
+def setup_logging():
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = jsonlogger.JsonFormatter(
+        "%(asctime)s %(levelname)s %(name)s %(message)s %(request_id)s"
+    )
+    handler.setFormatter(formatter)
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(handler)
 
 def get_pdf_texts(pdf_docs):
     text = ""
@@ -80,9 +93,10 @@ def get_conversational_chain(streaming=False, callbacks=None):
 
     return qa_chain
 
-def user_input(user_question, session_id):
+def user_input(user_question, session_id, request):
     # put_metric('User queries entered', 1)
     # embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001") 
+    embeddings = request.app.state.embeddings
     
     faiss_folder = f"faiss_index/{session_id}"
     if S3_STORAGE_ENABLED:
@@ -97,7 +111,7 @@ def user_input(user_question, session_id):
         {"input_documents": docs, "question": user_question},
         return_only_outputs=True
     )
-    print(response)
+    logger.info(response)
 
     return response['output_text']
 
@@ -158,7 +172,7 @@ def upload_faiss_to_s3(folder):
             s3_key = f"{folder}/{filename}"
             s3.upload_file(local_path, bucket_name, s3_key)
     except ClientError as e:
-        print(e)
+        logger.info(e)
         return False    
     return True
 
@@ -171,7 +185,7 @@ def download_faiss_from_s3(folder):
     for filename in ["index.faiss", "index.pkl"]:
         s3_key = f"{folder}/{filename}"
         local_path = os.path.join(tmp_dir, filename)
-        print("S3 download:", bucket_name, s3_key, "->", local_path)
+        logger.info("S3 download:", bucket_name, s3_key, "->", local_path)
         s3.download_file(bucket_name, s3_key, local_path)
 
     return os.path.join(folder, tmp_dir)

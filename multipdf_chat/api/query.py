@@ -4,10 +4,10 @@ from dotenv import load_dotenv
 import os
 load_dotenv()
 
-def query_answer(user_question, session_id):
+def query_answer(user_question, session_id, request):
     try:
         return {
-            "data": user_input(user_question, session_id)
+            "data": user_input(user_question, session_id, request)
         }
     except HTTPException as e:
         raise e

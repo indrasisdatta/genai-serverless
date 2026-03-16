@@ -7,10 +7,20 @@ from multipdf_chat.api.upload import upload_handler
 from multipdf_chat.api.query import query_answer
 from typing import List
 
-from multipdf_chat.helper import stream_user_input
+from multipdf_chat.helper import setup_logging, stream_user_input
 from multipdf_chat.models.userQuery import UserQuery
 
+import logging 
+import sys 
+import time 
+import uuid 
+from pythonjsonlogger import jsonlogger
+
 app = FastAPI()
+
+setup_logging()
+
+logger = logging.getLogger("api")
 
 origins = [
     "http://localhost:3000",  "http://localhost:5173"
@@ -23,6 +33,45 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+@app.middleware("http")
+async def logging_middleware(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    start_time = time.time()
+
+    logger.info(
+        "request_started",
+        extra={
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path
+        }
+    )
+
+    try:
+        response = await call_next(request)
+    except Exception:
+        logger.error(
+            "request_failed",
+            exc_info=True,
+            extra={"request_id": request_id}
+        )
+        raise
+
+    duration = time.time() - start_time 
+
+    logger.info(
+        "request_completed",
+        extra={
+            "request_id": request_id,
+            "status_code": response.status_code,
+            "duration": round(duration, 3)
+        }
+    )
+
+    response.headers["X-Request-ID"] = request_id
+    return response
+    
 
 @app.on_event("startup")
 def load_models():
@@ -37,17 +86,17 @@ def home():
 
 @app.post('/upload')
 def uploadFile(files: List[UploadFile] = File(...)):
-    print('Uploaded files: ', files)
+    logger.info('Uploaded files: ', files)
     return upload_handler(files)
 
 @app.post('/user_query')
-def userQuery(userQuery: UserQuery):
-    print(userQuery)
-    return query_answer(userQuery.user_question, userQuery.session_id)
+def userQuery(userQuery: UserQuery, request: Request):
+    logger.info(userQuery)
+    return query_answer(userQuery.user_question, userQuery.session_id, request)
 
 @app.post('/chat/stream')
-def userQuery(userQuery: UserQuery, request: Request):
-    print(userQuery)
+def streamUserQuery(userQuery: UserQuery, request: Request):
+    logger.info(userQuery)
     return StreamingResponse(
         stream_user_input(
             request, 
