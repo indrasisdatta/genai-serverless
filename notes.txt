@@ -20,5 +20,7 @@ ECS - cluster, task definition, service
 
 EC2 instance has ECS agent running, which does docker pull 
 
+============================
+
 
 
