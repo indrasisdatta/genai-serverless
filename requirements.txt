@@ -1,6 +1,7 @@
 pydantic
 langchain >= 0.1.13
 langchain-community >= 0.0.20
+langchain-experimental >= 0.0.50
 langchain-core
 langchain-groq
 langchain_huggingface

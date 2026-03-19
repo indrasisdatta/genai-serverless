@@ -85,9 +85,9 @@ def home():
     return { 'data': 'Welcome to Fast API home' }
 
 @app.post('/upload')
-def uploadFile(files: List[UploadFile] = File(...)):
-    logger.info('Uploaded files: ', files)
-    return upload_handler(files)
+def uploadFile(request: Request, files: List[UploadFile] = File(...)):
+    logger.info(f'Uploaded files: {files}')
+    return upload_handler(files, request)
 
 @app.post('/user_query')
 def userQuery(userQuery: UserQuery, request: Request):

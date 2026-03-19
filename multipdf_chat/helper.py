@@ -7,6 +7,7 @@ from PyPDF2 import PdfReader
 from langchain_community.vectorstores import FAISS
 from langchain.prompts import PromptTemplate
 from langchain.chains.question_answering import load_qa_chain
+from langchain_experimental.text_splitter import SemanticChunker
 from langchain_groq import ChatGroq
 import boto3 
 from botocore.exceptions import ClientError
@@ -50,8 +51,18 @@ def get_pdf_texts(pdf_docs):
         pdf.file.seek(0)
     return text
 
-def get_text_chunks(text):
-    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=1000)
+def get_text_chunks(text, type, request: Request):
+    embeddings = request.app.state.embeddings
+    if type == "recursive_char":
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000, 
+            chunk_overlap=200
+        )
+    elif type == "semantic":
+        splitter = SemanticChunker(
+            embeddings,
+            breakpoint_threshold_type="percentile", breakpoint_threshold_amount=90
+        )
     chunks = splitter.split_text(text)
     return chunks 
 
@@ -185,7 +196,7 @@ def download_faiss_from_s3(folder):
     for filename in ["index.faiss", "index.pkl"]:
         s3_key = f"{folder}/{filename}"
         local_path = os.path.join(tmp_dir, filename)
-        logger.info("S3 download:", bucket_name, s3_key, "->", local_path)
+        logger.info(f"S3 download: {bucket_name} {s3_key} -> {local_path}")
         s3.download_file(bucket_name, s3_key, local_path)
 
     return os.path.join(folder, tmp_dir)

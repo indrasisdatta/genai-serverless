@@ -1,4 +1,5 @@
 from email import message
+import logging
 from fastapi import HTTPException
 from requests import session
 # from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -11,12 +12,15 @@ from dotenv import load_dotenv
 import os
 import uuid
 import json
+from fastapi import Request
 
 load_dotenv()
 
 os.environ["HUGGINGFACEHUB_API_TOKEN"] = os.getenv("HUGGINGFACE_TOKEN")
 
-def upload_handler(pdf_files):
+logger = logging.getLogger("api")
+
+def upload_handler(pdf_files, request: Request):
     try:
         if not pdf_files:
             raise HTTPException(status_code=400, detail="No PDF file is provided")
@@ -24,7 +28,11 @@ def upload_handler(pdf_files):
         session_id = str(uuid.uuid4())   
         # Extract texts from PDF
         raw_text = get_pdf_texts(pdf_files)
-        chunks = get_text_chunks(raw_text)
+        # chunks = get_text_chunks(raw_text, "recursive_char", request)
+        chunks = get_text_chunks(raw_text, "semantic", request)
+        # logger.info("======= Semantic Splitter =========")
+        # logger.info(chunks)
+
         generate_embedding(chunks, session_id)
 
         return {
