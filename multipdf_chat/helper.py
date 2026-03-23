@@ -22,6 +22,9 @@ import os
 import io
 from dotenv import load_dotenv
 from multipdf_chat.api.StreamingHandler import StreamingHandler
+from langchain.retrievers import ParentDocumentRetriever
+from langchain.storage import InMemoryStore
+from langchain.docstore.document import Document
 
 load_dotenv()
 
@@ -51,6 +54,20 @@ def get_pdf_texts(pdf_docs):
         pdf.file.seek(0)
     return text
 
+def get_parent_child_splitters(request: Request):
+    embeddings = request.app.state.embeddings
+
+    parent_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=2000, 
+        chunk_overlap=200
+    )
+    child_splitter = SemanticChunker(
+        embeddings, 
+        breakpoint_threshold_type="percentile", 
+        breakpoint_threshold_amount=90
+    )
+    return parent_splitter, child_splitter
+
 def get_text_chunks(text, type, request: Request):
     embeddings = request.app.state.embeddings
     if type == "recursive_char":
@@ -66,10 +83,44 @@ def get_text_chunks(text, type, request: Request):
     chunks = splitter.split_text(text)
     return chunks 
 
-def generate_embedding(request: Request, chunks, session_id):
-    # embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001") 
+# def generate_embedding(request: Request, chunks, session_id):
+#     # embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001") 
+#     embeddings = request.app.state.embeddings
+#     vector_store = FAISS.from_texts(chunks, embedding=embeddings)
+#     vector_store.save_local(f"faiss_index/{session_id}")
+
+#     if S3_STORAGE_ENABLED:
+#         upload_faiss_to_s3(f"faiss_index/{session_id}")
+
+#     # put_metric('Embeddings generated', 1)
+
+def generate_embedding(request: Request, raw_text, session_id):
     embeddings = request.app.state.embeddings
-    vector_store = FAISS.from_texts(chunks, embedding=embeddings)
+
+    # Create splitters
+    parent_splitter, child_splitter = get_parent_child_splitters(request)
+    # Create document
+    docs = [
+        Document(
+            page_content=raw_text, 
+            metadata={"doc_id": session_id}
+        )
+    ]
+    # Vector store - child chunks
+    vector_store = FAISS.from_documents([], embedding=embeddings)
+    # Parent document store 
+    docstore = InMemoryStore()
+
+    # Create retriever
+    retriever = ParentDocumentRetriever(
+        vectorstore=vector_store,
+        docstore=docstore,
+        child_splitter=child_splitter,
+        parent_splitter=parent_splitter
+    )
+    retriever.add_documents(docs)
+
+    # Save vector store
     vector_store.save_local(f"faiss_index/{session_id}")
 
     if S3_STORAGE_ENABLED:
@@ -113,8 +164,25 @@ def user_input(user_question, session_id, request):
     if S3_STORAGE_ENABLED:
         faiss_folder = download_faiss_from_s3(f"faiss_index/{session_id}")
     
-    vector_store = FAISS.load_local(faiss_folder, embeddings, allow_dangerous_deserialization=True)
-    docs = vector_store.similarity_search(user_question)
+    # Load vector stores (child chunks)
+    vector_store = FAISS.load_local(
+        faiss_folder, 
+        embeddings, 
+        allow_dangerous_deserialization=True
+    )
+    docstore = InMemoryStore()
+
+    parent_splitter, child_splitter = get_parent_child_splitters(request)
+    # Create retriever
+    retriever = ParentDocumentRetriever(
+        vectorstore=vector_store,
+        docstore=docstore,
+        child_splitter=child_splitter,
+        parent_splitter=parent_splitter
+    )
+    # Retrieve
+    docs = retriever.get_relevant_documents(user_question)
+    # docs = vector_store.similarity_search(user_question)
 
     chain = get_conversational_chain(streaming=False, callbacks=None)
 
@@ -122,7 +190,7 @@ def user_input(user_question, session_id, request):
         {"input_documents": docs, "question": user_question},
         return_only_outputs=True
     )
-    logger.info(response)
+    # logger.info(response)
 
     return response['output_text']
 

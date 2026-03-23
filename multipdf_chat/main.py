@@ -91,12 +91,12 @@ def uploadFile(request: Request, files: List[UploadFile] = File(...)):
 
 @app.post('/user_query')
 def userQuery(userQuery: UserQuery, request: Request):
-    logger.info(userQuery)
+    # logger.info(f'User query: {userQuery}')
     return query_answer(userQuery.user_question, userQuery.session_id, request)
 
 @app.post('/chat/stream')
 def streamUserQuery(userQuery: UserQuery, request: Request):
-    logger.info(userQuery)
+    logger.info(f"User query: {userQuery}")
     return StreamingResponse(
         stream_user_input(
             request, 

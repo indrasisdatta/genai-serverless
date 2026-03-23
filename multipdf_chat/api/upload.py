@@ -28,18 +28,21 @@ def upload_handler(pdf_files, request: Request):
         session_id = str(uuid.uuid4())   
         # Extract texts from PDF
         raw_text = get_pdf_texts(pdf_files)
+        generate_embedding(request, raw_text, session_id)
+
         # chunks = get_text_chunks(raw_text, "recursive_char", request)
-        chunks = get_text_chunks(raw_text, "semantic", request)
+        # chunks = get_text_chunks(raw_text, "semantic", request)
         # logger.info("======= Semantic Splitter =========")
         # logger.info(chunks)
 
-        generate_embedding(chunks, session_id)
+        # generate_embedding(request, chunks, session_id)
 
         return {
             "session_id": session_id, 
             "message": "Embeddings generated"
         }
     except HTTPException as e:
+        logger.info(f"HTTP Exception: {str(e)}")
         raise e
     except Exception as e: 
         raise HTTPException(status_code=500, detail=str(e))
