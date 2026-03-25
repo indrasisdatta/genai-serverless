@@ -31,7 +31,7 @@ pip install -r requirements.txt
 ```
 
 4. Run FastAPI server 
-```bash uvicorn multipdf_chat.main:app --reload```
+```bash uvicorn multipdf_chat.main:app --port 9000 --reload```
 
 Your FastAPI app will be running at: http://127.0.0.1:8000
 

@@ -2,11 +2,13 @@ from fastapi import File, FastAPI, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_huggingface import HuggingFaceEmbeddings
+from requests import Session
 # from fastapi.exceptions import RequestValidationError
 from multipdf_chat.api.upload import upload_handler
 from multipdf_chat.api.query import query_answer
 from typing import List
 
+from multipdf_chat.db import SessionLocal, get_db
 from multipdf_chat.helper import setup_logging, stream_user_input
 from multipdf_chat.models.userQuery import UserQuery
 
@@ -75,6 +77,7 @@ async def logging_middleware(request: Request, call_next):
 
 @app.on_event("startup")
 def load_models():
+    app.state.db = SessionLocal
     app.state.embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2",
         model_kwargs={"device": "cpu"}
