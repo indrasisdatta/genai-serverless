@@ -61,3 +61,27 @@ See @docs/api-guidelines.md
  
  Path: `~/.claude/projects/<project>/memory/`
 
+#### Skills
+
+```
+.claude/
+    ---- skill
+        ---- SKILL.md
+        --- scripts/
+        --- resources/
+        --- assets/
+```
+
+Progressive Disclosure: 
+- Level 1: Description (always visible)
+- Level 2: SKILL.md body (loaded on demand)
+- Level 3: Referenced resources (loaded if needed)
+
+Claude won't call it (command)
+`disable-model-invocation: true`
+
+### Example: Fix a Jira bug 
+- Jira MCP tool - read Jira description 
+- Skill `/debug` - loads debugging logic to analyze the codebase and reproduce the error locally 
+- Filesystem MCP tool - write the fix to .tsx file 
+- Skill `/review` - runs a final pass to ensure the fix follows the project's architectural patterns 
