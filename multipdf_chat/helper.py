@@ -31,7 +31,9 @@ from langchain.docstore.document import Document
 
 load_dotenv()
 
-S3_STORAGE_ENABLED = os.getenv('S3_STORAGE_ENABLED')
+S3_STORAGE_ENABLED = (
+    os.getenv("S3_STORAGE_ENABLED", "false").lower() == "true"
+)
 
 def setup_logging():
     handler = logging.StreamHandler(sys.stdout)

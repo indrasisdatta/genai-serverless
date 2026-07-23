@@ -19,6 +19,9 @@ pip install -r requirements.txt -t python/
 1. Create a virtual environment     
 ```bash python -m venv myvenv```
 
+This project has old dependencies, so it's recommended to use Python 3.12 version.
+```bash py -3.12 -m venv myvenv```
+
 2. Activate environment (choose one based on your OS)
 ```bash myvenv/Scripts/activate.bat      # Windows CMD
 .\myvenv\Scripts\Activate.ps1    # Windows PowerShell
@@ -26,8 +29,9 @@ pip install -r requirements.txt -t python/
 
 3. Install dependencies
 ```bash
-pip install uvicorn
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install uvicorn
+python -m pip install -r requirements.txt
 ```
 
 4. Run FastAPI server 
