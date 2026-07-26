@@ -2,11 +2,13 @@ from fastapi import File, FastAPI, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_huggingface import HuggingFaceEmbeddings
+from requests import Session
 # from fastapi.exceptions import RequestValidationError
 from multipdf_chat.api.upload import upload_handler
 from multipdf_chat.api.query import query_answer
 from typing import List
 
+from multipdf_chat.db import SessionLocal, get_db
 from multipdf_chat.helper import setup_logging, stream_user_input
 from multipdf_chat.models.userQuery import UserQuery
 
@@ -75,6 +77,7 @@ async def logging_middleware(request: Request, call_next):
 
 @app.on_event("startup")
 def load_models():
+    app.state.db = SessionLocal
     app.state.embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2",
         model_kwargs={"device": "cpu"}
@@ -85,18 +88,18 @@ def home():
     return { 'data': 'Welcome to Fast API home' }
 
 @app.post('/upload')
-def uploadFile(files: List[UploadFile] = File(...)):
-    logger.info('Uploaded files: ', files)
-    return upload_handler(files)
+def uploadFile(request: Request, files: List[UploadFile] = File(...)):
+    logger.info(f'Uploaded files: {files}')
+    return upload_handler(files, request)
 
 @app.post('/user_query')
 def userQuery(userQuery: UserQuery, request: Request):
-    logger.info(userQuery)
+    # logger.info(f'User query: {userQuery}')
     return query_answer(userQuery.user_question, userQuery.session_id, request)
 
 @app.post('/chat/stream')
 def streamUserQuery(userQuery: UserQuery, request: Request):
-    logger.info(userQuery)
+    logger.info(f"User query: {userQuery}")
     return StreamingResponse(
         stream_user_input(
             request, 
