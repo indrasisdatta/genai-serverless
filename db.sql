@@ -9,7 +9,7 @@ CREATE TABLE child_chunks (
   id UUID PRIMARY KEY,
   parent_id UUID REFERENCES parent_documents(id) ON DELETE CASCADE,
   content TEXT,
-  embedding VECTOR(1536),
+  embedding VECTOR(384),
   metadata JSONB,
   created_at TIMESTAMP DEFAULT NOW()
 );
