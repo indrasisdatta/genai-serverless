@@ -162,43 +162,6 @@ def generate_embedding(request: Request, raw_text, session_id):
             child_rows
         )
 
-        # for parent_chunk in parent_chunks:
-        #     parent_id = str(uuid.uuid4())
-
-        #     # Insert parent
-        #     db.execute(
-        #         text("""
-        #         INSERT INTO parent_documents (id, content, metadata) 
-        #         VALUES (:id, :content, :metadata)
-        #         """),
-        #         {
-        #             "id": parent_id,
-        #             "content": parent_chunk,
-        #             "metadata": json.dumps({"session_id": session_id})
-        #         }
-        #     )
-
-        #     # Child chunks 
-        #     child_chunks = child_splitter.split_text(parent_chunk)
-
-        #     for child_chunk in child_chunks:
-        #         embedding = embeddings.embed_query(child_chunk)
-        #         db.execute(
-        #             text("""
-        #             INSERT INTO child_chunks 
-        #             (id, parent_id, content, embedding, metadata) 
-        #             VALUES 
-        #             (:id, :parent_id, :content, :embedding, :metadata)
-        #             """),
-        #             {
-        #                 "id": str(uuid.uuid4()), 
-        #                 "parent_id": parent_id, 
-        #                 "content": child_chunk, 
-        #                 "embedding": embedding, 
-        #                 "metadata": json.dumps({ "session_id": session_id })
-        #             }
-        #         )
-
         db.commit()
 
     except Exception as e:
@@ -268,6 +231,47 @@ def get_conversational_chain(streaming=False, callbacks=None):
 
     return qa_chain
 
+def user_input_FAISS(user_question, session_id, request):
+    # put_metric('User queries entered', 1)
+    # embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001") 
+    embeddings = request.app.state.embeddings
+    
+    faiss_folder = f"faiss_index/{session_id}"
+    if S3_STORAGE_ENABLED:
+        faiss_folder = download_faiss_from_s3(f"faiss_index/{session_id}")
+    
+    # Load vector stores (child chunks)
+    vector_store = FAISS.load_local(
+        faiss_folder, 
+        embeddings, 
+        allow_dangerous_deserialization=True
+    )
+    docstore = InMemoryStore()
+
+    parent_splitter, child_splitter = get_parent_child_splitters(request)
+    # Create retriever
+    retriever = ParentDocumentRetriever(
+        vectorstore=vector_store,
+        docstore=docstore,
+        child_splitter=child_splitter,
+        parent_splitter=parent_splitter
+    )
+    # Retrieve
+    docs = retriever.get_relevant_documents(user_question)
+    # docs = vector_store.similarity_search(user_question)
+
+    chain = get_conversational_chain(streaming=False, callbacks=None)
+
+    response = chain(
+        {"input_documents": docs, "question": user_question},
+        return_only_outputs=True
+    )
+    # logger.info(response)
+
+    return response['output_text']
+
+    # put_metric('User queries answered', 1)
+
 def user_input(user_question, session_id, request):
     embeddings = request.app.state.embeddings
     db = request.app.state.db() 
@@ -331,90 +335,113 @@ def user_input(user_question, session_id, request):
     finally:
         db.close()
 
-def user_input_FAISS(user_question, session_id, request):
-    # put_metric('User queries entered', 1)
-    # embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001") 
-    embeddings = request.app.state.embeddings
-    
-    faiss_folder = f"faiss_index/{session_id}"
-    if S3_STORAGE_ENABLED:
-        faiss_folder = download_faiss_from_s3(f"faiss_index/{session_id}")
-    
-    # Load vector stores (child chunks)
-    vector_store = FAISS.load_local(
-        faiss_folder, 
-        embeddings, 
-        allow_dangerous_deserialization=True
-    )
-    docstore = InMemoryStore()
 
-    parent_splitter, child_splitter = get_parent_child_splitters(request)
-    # Create retriever
-    retriever = ParentDocumentRetriever(
-        vectorstore=vector_store,
-        docstore=docstore,
-        child_splitter=child_splitter,
-        parent_splitter=parent_splitter
-    )
-    # Retrieve
-    docs = retriever.get_relevant_documents(user_question)
-    # docs = vector_store.similarity_search(user_question)
-
-    chain = get_conversational_chain(streaming=False, callbacks=None)
-
-    response = chain(
-        {"input_documents": docs, "question": user_question},
-        return_only_outputs=True
-    )
-    # logger.info(response)
-
-    return response['output_text']
-
-    # put_metric('User queries answered', 1)
-
+"""
+ User question -> Generate embedding (384)
+ Vector search on child_chunk.embedding
+ Get top k child chunks -> Collect parent_ids 
+ Fetch parent_documents -> Pass parent document to LangChain -> LLM Response 
+"""
 async def stream_user_input(request: Request, user_question, session_id):
-    # put_metric('User queries entered', 1)
-    # embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001") 
-    embeddings = request.app.state.embeddings
-    faiss_folder = f"faiss_index/{session_id}"
-    if S3_STORAGE_ENABLED:
-        faiss_folder = download_faiss_from_s3(f"faiss_index/{session_id}")
-    
-    vector_store = FAISS.load_local(
-        faiss_folder, embeddings, allow_dangerous_deserialization=True
-    )
-    docs = vector_store.similarity_search(user_question)
+    embeddings = request.app.state.embeddings 
+    db = request.app.state.db()
 
-    handler = StreamingHandler()
+    try:
+        # Generate Query embedding
+        query_embedding = embeddings.embed_query(user_question)
 
-    chain = get_conversational_chain(streaming=True, callbacks=[handler])
+        # Find nearest child chunks - order by cosine distance between stored embeddings and query embedding
+        result = db.execute(
+            text("""
+                SELECT parent_id FROM child_chunks 
+                WHERE metadata ->> 'session_id' = :session_id 
+                ORDER BY embedding <=> CAST(:embedding AS vector)
+                LIMIT 5
+            """),
+            {
+                "session_id": session_id,
+                "embedding": str(query_embedding)
+            }
+        )
+        rows = result.fetchall() 
 
-    # Run chain in the background
-    asyncio.create_task(
-        chain.ainvoke({
-            "input_documents": docs, 
-            "question": user_question
-        })
-    )
+        if not rows: 
+            yield "No relevant data found"
+            return 
 
-    buffer = ""
+        # Store unique parent ids 
+        parent_ids = []
+        seen = set() 
+        for row in rows:
+            if row[0] not in seen:
+                seen.add(row[0])
+                parent_ids.append(row[0])
 
-    while (True):
-        token = await handler.queue.get() 
-        if token is None: 
-            break
-        if not token or token.strip() == "":
-            continue
+        # Fetch parent documents 
+        result = db.execute(
+            text("""
+            SELECT id, content FROM parent_documents 
+            WHERE id = ANY(:ids)
+            """),
+            { "ids": parent_ids }
+        )
 
-        buffer += token 
-        if len(buffer) > 20:
-            yield buffer
-            buffer = "" 
+        docs = [
+            Document(
+                page_content = row[1],
+                metadata = {
+                    "id": str(row[0]),
+                    "session_id": session_id
+                }
+            )
+            for row in result.fetchall()
+        ]
 
-    # put_metric('User queries answered', 1)
+        if not docs: 
+            yield "No matching parent documents found"
+            return 
 
-    if buffer:
-        yield buffer
+        # Stream response 
+        handler = StreamingHandler()
+
+        chain = get_conversational_chain(
+            streaming=True, 
+            callbacks=[handler]
+        )
+        asyncio.create_task(
+            chain.ainvoke(
+                {
+                    "input_documents": docs, 
+                    "question": user_question
+                },
+                config={
+                    "callbacks": [handler]
+                }
+            )
+        )
+
+        buffer = ""
+
+        while True:
+
+            token = await handler.queue.get()
+            if token is None:
+                break 
+
+            if not token or token.isspace():
+                continue 
+
+            buffer += token 
+
+            if len(buffer) >= 20:
+                yield buffer 
+                buffer = "" 
+
+        if buffer:
+            yield buffer 
+
+    finally: 
+        db.close()
 
 def upload_faiss_to_s3(folder):
     bucket_name = os.getenv('AWS_S3_UPLOAD_BUCKET')
