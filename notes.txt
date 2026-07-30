@@ -23,4 +23,49 @@ EC2 instance has ECS agent running, which does docker pull
 ============================
 
 
+My understanding of streaming API /stream/query:
+
+1) The API should return StreamingResponse (FastAPI provided)
+2) Controller function is async, should have -> yield buffer (or yield "No data") 
+3) StreamingHandler extends LangChain's AsyncCallbackHandler - on_llm_new_token, on_llm_error, on_llm_end 
+   (pushes to asyncio.queue, streams data until None is received)
+4) docs - retrieved from parent_documents DB after doing similarity search on child_chunks 
+5) PromptTemplate configuration 
+    template = """Answer the question based on context. Question: {question}\n, Context: {context} """
+    prompt = PromptTemplate(template=template, input_variables=[context, question])
+6) ChatGroq object 
+    handler = StreamingHandler()
+    model = ChatGroq(
+        model="llama-3.1-8b-instant",
+        groq_api_key=groq_api_key,
+        streaming=True,
+        callbacks=handler
+    )
+7) load_qa_chain imported from langchain.chains 
+    chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
+8) Invoke chain asyncronously 
+    When chain runs, output is pushed to asyncio.queue
+    asyncio.create_task(
+        chain.ainvoke({
+            "input_documents": docs,
+            "question": question
+        )
+    )
+9) Buffering logic - instead of returning token by token, store 20 tokens in buffer and return in bulk
+
+    buffer = ""
+    while True:
+        token = await handler.queue.get()
+        if token is None:
+            break 
+        // Not sure??
+        if not token or token.isspace():
+            continue;
+        buffer += token 
+        if len(buffer) >= 20:
+            yield buffer 
+            buffer = ""
+    
+    if buffer:
+        yield buffer 
 
