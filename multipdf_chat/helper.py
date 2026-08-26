@@ -215,7 +215,7 @@ def get_conversational_chain(streaming=False, callbacks=None):
     """
 
     model = ChatGroq(
-        model="llama-3.1-8b-instant", 
+        model="qwen/qwen3.6-27b", 
         groq_api_key=os.getenv('GROQ_API_KEY'),
         streaming=streaming,
         callbacks=callbacks
