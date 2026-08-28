@@ -5,12 +5,14 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from requests import Session
 # from fastapi.exceptions import RequestValidationError
 from multipdf_chat.api.upload import upload_handler
+from multipdf_chat.api.create_file_embeddings_handler import create_file_embeddings_handler
 from multipdf_chat.api.query import query_answer
 from typing import List
 
 from multipdf_chat.db import SessionLocal, get_db
 from multipdf_chat.helper import setup_logging, stream_user_input
 from multipdf_chat.models.userQuery import UserQuery
+from multipdf_chat.models.embedingPayload import CreateEmbeddingPayload
 
 import logging 
 import sys 
@@ -91,6 +93,11 @@ def home():
 def uploadFile(request: Request, files: List[UploadFile] = File(...)):
     logger.info(f'Uploaded files: {files}')
     return upload_handler(files, request)
+
+@app.post('/create_embeddings')
+def createFileEmbeddings(payload: CreateEmbeddingPayload, request: Request):
+    logger.info(f'Embedding payload: {payload}')
+    return create_file_embeddings_handler(payload.doc_slugs, request)
 
 @app.post('/user_query')
 def userQuery(userQuery: UserQuery, request: Request):
