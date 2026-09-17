@@ -19,6 +19,7 @@ import sys
 import time 
 import uuid 
 from pythonjsonlogger import jsonlogger
+from contextlib import asynccontextmanager
 
 app = FastAPI()
 
@@ -77,13 +78,31 @@ async def logging_middleware(request: Request, call_next):
     return response
     
 
-@app.on_event("startup")
-def load_models():
-    app.state.db = SessionLocal
-    app.state.embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"}
-    )
+# @app.on_event("startup")
+# def load_models():
+#     app.state.db = SessionLocal
+#     app.state.embeddings = HuggingFaceEmbeddings(
+#         model_name="sentence-transformers/all-MiniLM-L6-v2",
+#         model_kwargs={"device": "cpu"}
+#     )
+
+
+@asynccontextmanager
+def lifespan(app: FastAPI):
+    try:
+        # Start up
+        app.state.db = SessionLocal
+        app.state.embeddings = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            model_kwargs={"device": "cpu"}
+        )
+
+        yield
+    
+    finally:
+        # Shutdown/clean-up
+        app.state.db = None 
+        app.state.embeddings = None
 
 @app.get('/')
 def home():

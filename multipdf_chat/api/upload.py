@@ -6,13 +6,15 @@ from requests import session
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 # import google.generativeai as genai
-from ..helper import generate_embedding, get_pdf_texts, get_text_chunks, user_input
+from ..helper import generate_embedding, get_pdf_texts, get_text_chunks, user_input, get_parent_child_splitters
 
 from dotenv import load_dotenv
 import os
 import uuid
 import json
-from fastapi import Request
+from fastapi import Request, UploadFile
+from typing import List
+from sqlalchemy import text
 
 load_dotenv()
 
@@ -20,22 +22,23 @@ os.environ["HUGGINGFACEHUB_API_TOKEN"] = os.getenv("HUGGINGFACE_TOKEN")
 
 logger = logging.getLogger("api")
 
-def upload_handler(pdf_files, request: Request):
-    try:
-        if not pdf_files:
-            raise HTTPException(status_code=400, detail="No PDF file is provided")
-        
-        session_id = str(uuid.uuid4())   
-        # Extract texts from PDF
+FIND_DOCUMENT = text("""
+    SELECT doc_id, slug, product_line 
+    FROM documents 
+    WHERE slug = :slug
+""")
+
+def upload_handler(pdf_files: List[UploadFile], request: Request):
+    """POST /upload - ingest one or more PDFs as a single atomic batch."""
+    if not pdf_files:
+        raise HTTPException(status_code=400, detail="No PDF file is provided")
+    
+    session_id = str(uuid.uuid4())   
+
+    try:      
+        # [PDF1, PDF2, PDF3] -> chunks -> raw text (Extract texts from PDF)
         raw_text = get_pdf_texts(pdf_files)
-        generate_embedding(request, raw_text, session_id)
-
-        # chunks = get_text_chunks(raw_text, "recursive_char", request)
-        # chunks = get_text_chunks(raw_text, "semantic", request)
-        # logger.info("======= Semantic Splitter =========")
-        # logger.info(chunks)
-
-        # generate_embedding(request, chunks, session_id)
+        generate_embedding(request, raw_text, session_id)            
 
         return {
             "session_id": session_id, 
