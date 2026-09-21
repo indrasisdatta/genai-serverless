@@ -21,14 +21,33 @@ import uuid
 from pythonjsonlogger import jsonlogger
 from contextlib import asynccontextmanager
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        # Start up
+        app.state.db = SessionLocal
+        app.state.embeddings = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            model_kwargs={"device": "cpu"}
+        )
+
+        yield
+    
+    finally:
+        # Shutdown/clean-up
+        app.state.db = None 
+        app.state.embeddings = None
+
+
+app = FastAPI(lifespan=lifespan)
 
 setup_logging()
 
 logger = logging.getLogger("api")
 
 origins = [
-    "http://localhost:3000",  "http://localhost:5173"
+    "http://localhost:3000", "http://localhost:5173"
 ]
 
 app.add_middleware(
@@ -85,24 +104,6 @@ async def logging_middleware(request: Request, call_next):
 #         model_name="sentence-transformers/all-MiniLM-L6-v2",
 #         model_kwargs={"device": "cpu"}
 #     )
-
-
-@asynccontextmanager
-def lifespan(app: FastAPI):
-    try:
-        # Start up
-        app.state.db = SessionLocal
-        app.state.embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2",
-            model_kwargs={"device": "cpu"}
-        )
-
-        yield
-    
-    finally:
-        # Shutdown/clean-up
-        app.state.db = None 
-        app.state.embeddings = None
 
 @app.get('/')
 def home():
