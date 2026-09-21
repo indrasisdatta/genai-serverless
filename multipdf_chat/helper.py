@@ -341,7 +341,7 @@ def get_conversational_chain(streaming=False, callbacks=None):
     """
 
     model = ChatGroq(
-        model="qwen/qwen3.6-27b", 
+        model="openai/gpt-oss-20b",
         groq_api_key=os.getenv('GROQ_API_KEY'),
         streaming=streaming,
         callbacks=callbacks
@@ -476,16 +476,20 @@ async def stream_user_input(request: Request, user_question, session_id):
         # Generate Query embedding
         query_embedding = embeddings.embed_query(user_question)
 
+        # WHERE metadata ->> 'session_id' = :session_id 
+
         # Find nearest child chunks - order by cosine distance between stored embeddings and query embedding
         result = db.execute(
             text("""
-                SELECT parent_id FROM child_chunks 
-                WHERE metadata ->> 'session_id' = :session_id 
-                ORDER BY embedding <=> CAST(:embedding AS vector)
-                LIMIT 5
+                SELECT 
+                    parent_id,
+                    embedding <=> CAST(:embedding AS vector) AS distance 
+                FROM child_chunks                 
+                ORDER BY distance
+                LIMIT 10
             """),
             {
-                "session_id": session_id,
+                # "session_id": session_id,
                 "embedding": str(query_embedding)
             }
         )
@@ -506,7 +510,7 @@ async def stream_user_input(request: Request, user_question, session_id):
         # Fetch parent documents 
         result = db.execute(
             text("""
-            SELECT id, content FROM parent_documents 
+            SELECT id, content, doc_id, section_path FROM parent_documents 
             WHERE id = ANY(:ids)
             """),
             { "ids": parent_ids }
@@ -517,7 +521,9 @@ async def stream_user_input(request: Request, user_question, session_id):
                 page_content = row[1],
                 metadata = {
                     "id": str(row[0]),
-                    "session_id": session_id
+                    "doc_id": row[2],
+                    "section_path": row[3]
+                    # "session_id": session_id
                 }
             )
             for row in result.fetchall()
