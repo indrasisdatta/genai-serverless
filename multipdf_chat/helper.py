@@ -31,6 +31,7 @@ from multipdf_chat.api.StreamingHandler import StreamingHandler
 from langchain.retrievers import ParentDocumentRetriever
 from langchain.storage import InMemoryStore
 from langchain.docstore.document import Document
+from multipdf_chat.retrieval import retrieve
 
 load_dotenv()
 
@@ -468,70 +469,28 @@ def user_input(user_question, session_id, request):
  Get top k child chunks -> Collect parent_ids 
  Fetch parent_documents -> Pass parent document to LangChain -> LLM Response 
 """
-async def stream_user_input(request: Request, user_question, session_id):
+async def stream_user_input(request: Request, user_question, product_line=None):
     embeddings = request.app.state.embeddings 
     db = request.app.state.db()
 
     try:
-        # Generate Query embedding
-        query_embedding = embeddings.embed_query(user_question)
+        parents = retrieve(db, embeddings, user_question, product_line)
 
-        # WHERE metadata ->> 'session_id' = :session_id 
-
-        # Find nearest child chunks - order by cosine distance between stored embeddings and query embedding
-        result = db.execute(
-            text("""
-                SELECT 
-                    parent_id,
-                    embedding <=> CAST(:embedding AS vector) AS distance 
-                FROM child_chunks                 
-                ORDER BY distance
-                LIMIT 10
-            """),
-            {
-                # "session_id": session_id,
-                "embedding": str(query_embedding)
-            }
-        )
-        rows = result.fetchall() 
-
-        if not rows: 
+        if not parents: 
             yield "No relevant data found"
             return 
 
-        # Store unique parent ids 
-        parent_ids = []
-        seen = set() 
-        for row in rows:
-            if row[0] not in seen:
-                seen.add(row[0])
-                parent_ids.append(row[0])
-
-        # Fetch parent documents 
-        result = db.execute(
-            text("""
-            SELECT id, content, doc_id, section_path FROM parent_documents 
-            WHERE id = ANY(:ids)
-            """),
-            { "ids": parent_ids }
-        )
-
         docs = [
             Document(
-                page_content = row[1],
-                metadata = {
-                    "id": str(row[0]),
-                    "doc_id": row[2],
-                    "section_path": row[3]
-                    # "session_id": session_id
+                page_content=p.content,
+                metadata={
+                    "id": p.parent_id,
+                    "doc_slug": p.doc_slug,
+                    "section_path": p.section_path
                 }
             )
-            for row in result.fetchall()
+            for p in parents
         ]
-
-        if not docs: 
-            yield "No matching parent documents found"
-            return 
 
         # Stream response 
         handler = StreamingHandler()
@@ -553,18 +512,13 @@ async def stream_user_input(request: Request, user_question, session_id):
         )
 
         buffer = ""
-
         while True:
-
             token = await handler.queue.get()
             if token is None:
                 break 
-
             if not token or token.isspace():
                 continue 
-
             buffer += token 
-
             if len(buffer) >= 20:
                 yield buffer 
                 buffer = "" 
