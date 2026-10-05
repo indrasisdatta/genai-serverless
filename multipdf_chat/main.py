@@ -15,12 +15,10 @@ from multipdf_chat.models.userQuery import UserQuery
 from multipdf_chat.models.embedingPayload import CreateEmbeddingPayload
 
 import logging 
-import sys 
 import time 
 import uuid 
-from pythonjsonlogger import jsonlogger
 from contextlib import asynccontextmanager
-
+from multipdf_chat.logging_context import set_request_id
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -61,6 +59,8 @@ app.add_middleware(
 @app.middleware("http")
 async def logging_middleware(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    set_request_id(request_id) # any downstream code can now read it
+
     start_time = time.time()
 
     logger.info(

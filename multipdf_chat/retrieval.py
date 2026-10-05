@@ -3,6 +3,9 @@ from dataclasses import dataclass
 from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from multipdf_chat.logging_context import get_request_id
+import time 
+import logging
 
 @dataclass 
 class RetrievedParent:
@@ -14,6 +17,8 @@ class RetrievedParent:
     distance: float 
     source_url: Optional[str] = None 
     authority_tier: Optional[int] = None 
+
+logger = logging.getLogger("api")
 
 def retrieve(
     db: Session,
@@ -29,10 +34,21 @@ def retrieve(
     accepted but ignored here - step 2 wires it into the SQL and replaces
     the body with the CTE from ReArchitecture.md #3.
     """
+    request_id = get_request_id()
+    logger.info("retrieval_started", extra={
+        "request_id": request_id,
+        "k": k,
+        "product_line": product_line,
+        "question_len": len(user_question),
+    })
+    t_embed_start = time.perf_counter()
     query_embedding = embeddings.embed_query(user_question)
+    embed_ms = round((time.perf_counter() - t_embed_start) * 1000)
+    
     # WHERE metadata ->> 'session_id' = :session_id 
 
     # Find nearest child chunks - order by cosine distance between stored embeddings and query embedding
+    t_sql_start = time.perf_counter()
     result = db.execute(
         text("""
             SELECT 
@@ -89,6 +105,19 @@ def retrieve(
     by_id = { str(p['parent_id']): p for p in parents }
 
     ordered =  [ by_id[pid] for pid in parent_ids if pid in by_id ]
+
+    sql_ms = round((time.perf_counter() - t_sql_start) * 1000)
+
+    logger.info("retrieval_completed", extra={
+        "request_id": request_id,
+        "n_parents": len(parents),
+        "min_distance": min(dist_by_parent.values()) if dist_by_parent else None,
+        "max_distance": max(dist_by_parent.values()) if dist_by_parent else None,
+        "embed_ms": embed_ms,
+        "sql_ms": sql_ms,
+        "duration_ms": embed_ms + sql_ms,
+        "docs_returned": [p.doc_slug for p in parents[:3]],
+    })
 
     return [
         RetrievedParent(

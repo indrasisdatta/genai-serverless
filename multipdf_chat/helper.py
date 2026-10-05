@@ -32,6 +32,8 @@ from langchain.retrievers import ParentDocumentRetriever
 from langchain.storage import InMemoryStore
 from langchain.docstore.document import Document
 from multipdf_chat.retrieval import retrieve
+from multipdf_chat.logging_context import get_request_id
+import time
 
 load_dotenv()
 
@@ -470,6 +472,7 @@ def user_input(user_question, session_id, request):
  Fetch parent_documents -> Pass parent document to LangChain -> LLM Response 
 """
 async def stream_user_input(request: Request, user_question, product_line=None):
+    request_id = get_request_id()
     embeddings = request.app.state.embeddings 
     db = request.app.state.db()
 
@@ -477,6 +480,9 @@ async def stream_user_input(request: Request, user_question, product_line=None):
         parents = retrieve(db, embeddings, user_question, product_line)
 
         if not parents: 
+            logger.info("generation_skipped", extra={
+                "request_id": request_id, "reason": "no_parents",
+            })
             yield "No relevant data found"
             return 
 
@@ -491,6 +497,11 @@ async def stream_user_input(request: Request, user_question, product_line=None):
             )
             for p in parents
         ]
+        logger.info("generation_started", extra={
+            "request_id": request_id, "n_context_docs": len(docs),
+        })
+
+        gen_start = time.perf_counter()
 
         # Stream response 
         handler = StreamingHandler()
@@ -511,6 +522,7 @@ async def stream_user_input(request: Request, user_question, product_line=None):
             )
         )
 
+        token_count = 0
         buffer = ""
         while True:
             token = await handler.queue.get()
@@ -518,6 +530,7 @@ async def stream_user_input(request: Request, user_question, product_line=None):
                 break 
             if not token or token.isspace():
                 continue 
+            token_count += 1 # counter only — do NOT log per token
             buffer += token 
             if len(buffer) >= 20:
                 yield buffer 
@@ -525,6 +538,12 @@ async def stream_user_input(request: Request, user_question, product_line=None):
 
         if buffer:
             yield buffer 
+
+        logger.info("generation_completed", extra={
+            "request_id": request_id,
+            "duration_ms": round((time.perf_counter() - gen_start) * 1000),
+            "tokens": token_count,
+        })
 
     finally: 
         db.close()
