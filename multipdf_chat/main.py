@@ -9,7 +9,12 @@ from multipdf_chat.api.create_file_embeddings_handler import create_file_embeddi
 from multipdf_chat.api.query import query_answer
 from typing import List
 
-from multipdf_chat.db import SessionLocal, get_db
+from multipdf_chat.db import (
+    SessionLocal,
+    AsyncSessionLocal,
+    engine,
+    async_engine,
+)
 from multipdf_chat.helper import setup_logging, stream_user_input
 from multipdf_chat.models.userQuery import UserQuery
 from multipdf_chat.models.embedingPayload import CreateEmbeddingPayload
@@ -25,16 +30,21 @@ async def lifespan(app: FastAPI):
     try:
         # Start up
         app.state.db = SessionLocal
+        app.state.async_db = AsyncSessionLocal
         app.state.embeddings = HuggingFaceEmbeddings(
             model_name="sentence-transformers/all-MiniLM-L6-v2",
             model_kwargs={"device": "cpu"}
         )
 
         yield
+
+        await async_engine.dispose()
+        engine.dispose()
     
     finally:
         # Shutdown/clean-up
         app.state.db = None 
+        app.state.async_db = None
         app.state.embeddings = None
 
 

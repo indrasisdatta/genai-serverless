@@ -31,7 +31,7 @@ from multipdf_chat.api.StreamingHandler import StreamingHandler
 from langchain.retrievers import ParentDocumentRetriever
 from langchain.storage import InMemoryStore
 from langchain.docstore.document import Document
-from multipdf_chat.retrieval import retrieve
+from multipdf_chat.retrieval import retrieve_async
 from multipdf_chat.logging_context import get_request_id
 import time
 
@@ -474,10 +474,12 @@ def user_input(user_question, session_id, request):
 async def stream_user_input(request: Request, user_question, product_line=None):
     request_id = get_request_id()
     embeddings = request.app.state.embeddings 
-    db = request.app.state.db()
+    # db = request.app.state.db()
 
-    try:
-        parents = retrieve(db, embeddings, user_question, product_line)
+    # try:
+
+    async with request.app.state.async_db() as db:
+        parents = await retrieve_async(db, embeddings, user_question, product_line, k=10)
 
         if not parents: 
             logger.info("generation_skipped", extra={
@@ -510,22 +512,60 @@ async def stream_user_input(request: Request, user_question, product_line=None):
             streaming=True, 
             callbacks=[handler]
         )
-        asyncio.create_task(
-            chain.ainvoke(
-                {
-                    "input_documents": docs, 
-                    "question": user_question
-                },
-                config={
-                    "callbacks": [handler]
-                }
-            )
-        )
+
+        async def _run_chain():
+            try:
+                await chain.ainvoke(
+                    {
+                        "input_documents": docs, 
+                        "question": user_question
+                    },
+                    config={
+                        "callbacks": [handler]
+                    }
+                )
+            except Exception as e:
+                logger.error(
+                    "chain_failed",
+                    extra={"request_id": request_id, "error": str(e)},
+                        exc_info=True,
+                )
+                # await handler.queue.put(f"\n[Error: {str(e)}]")
+                await handler.queue.put(
+                    "\nSorry, I couldn't generate a response right now."
+                )
+            finally: 
+                await handler.queue.put(None)
+
+        # Store the task so we can cancel it on disconnect
+        gen_task = asyncio.create_task(_run_chain())
 
         token_count = 0
         buffer = ""
         while True:
-            token = await handler.queue.get()
+            try:
+                # Non-blocking wait with timeout to check for disconnect
+                token = await asyncio.wait_for(
+                    handler.queue.get(), 
+                    timeout=0.5
+                )
+            except asyncio.TimeoutError:
+                # Check if the client disconnected 
+                if await request.is_disconnected():
+                    logger.info("client_disconnected", extra={
+                        "request_id": request_id,
+                        "tokens_sent": token_count,
+                    })
+                    gen_task.cancel() 
+
+                    try:
+                        await gen_task
+                    except asyncio.CancelledError:
+                        pass
+
+                    break 
+                continue
+
             if token is None:
                 break 
             if not token or token.isspace():
@@ -544,9 +584,6 @@ async def stream_user_input(request: Request, user_question, product_line=None):
             "duration_ms": round((time.perf_counter() - gen_start) * 1000),
             "tokens": token_count,
         })
-
-    finally: 
-        db.close()
 
 def upload_faiss_to_s3(folder):
     bucket_name = os.getenv('AWS_S3_UPLOAD_BUCKET')
