@@ -101,6 +101,7 @@ from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+
 @dataclass
 class RetrievedParent:
     parent_id: str
@@ -111,6 +112,7 @@ class RetrievedParent:
     distance: float
     source_url: Optional[str] = None
     authority_tier: Optional[int] = None
+
 
 def retrieve(
     db: Session,
@@ -469,21 +471,21 @@ Replace the body of `retrieve()` in `multipdf_chat/retrieval.py` (from step 1)
 with the CTE from [ReArchitecture.md §3](Notes/RAG_Workflow_Docs/ReArchitecture.md):
 ```python
 def retrieve(
-db: Session,
-embeddings,
-question: str,
-product_line: Optional[str] = None,
-k: int = 10,
+    db: Session,
+    embeddings,
+    question: str,
+    product_line: Optional[str] = None,
+    k: int = 10,
 ) -> list[RetrievedParent]:
-"""
-Aligned with ReArchitecture.md §3:
-filter by status = 'active' and product_line overlap
-GROUP BY parent_id, MIN(distance) so sibling children collapse
-single SQL statement, one JOIN back to documents for citation fields
-"""
-query_vec = embeddings.embed_query(question)
-rows = db.execute(
-text("""
+    """
+    Aligned with ReArchitecture.md §3:
+    filter by status = 'active' and product_line overlap
+    GROUP BY parent_id, MIN(distance) so sibling children collapse
+    single SQL statement, one JOIN back to documents for citation fields
+    """
+    query_vec = embeddings.embed_query(question)
+    rows = db.execute(
+        text("""
 WITH nearest AS (
 SELECT c.parent_id,
 MIN(c.embedding <=> CAST(:embedding AS vector)) AS distance
@@ -509,25 +511,25 @@ JOIN parent_documents p ON p.id = n.parent_id
 JOIN documents d ON d.doc_id = p.doc_id
 ORDER BY n.distance
 """),
-{
-"embedding": str(query_vec),
-"product_line": product_line,
-"k": k,
-},
-).mappings().all()
-return [
-RetrievedParent(
-parent_id=str(r["parent_id"]),
-doc_slug=r["doc_slug"],
-doc_title=r["doc_title"],
-section_path=r["section_path"],
-content=r["content"],
-distance=r["distance"],
-source_url=r["source_url"],
-authority_tier=r["authority_tier"],
-)
-for r in rows
-]
+        {
+            "embedding": str(query_vec),
+            "product_line": product_line,
+            "k": k,
+        },
+    ).mappings().all()
+    return [
+        RetrievedParent(
+            parent_id=str(r["parent_id"]),
+            doc_slug=r["doc_slug"],
+            doc_title=r["doc_title"],
+            section_path=r["section_path"],
+            content=r["content"],
+            distance=r["distance"],
+            source_url=r["source_url"],
+            authority_tier=r["authority_tier"],
+        )
+        for r in rows
+    ]
 ```
 API surface changes
 Update the request payload to accept `product_line`:
@@ -537,25 +539,25 @@ from typing import Optional
 from pydantic import BaseModel
 
 class UserQuery(BaseModel):
-user_question: str
-session_id: Optional[str] = None
-product_line: Optional[str] = None # new: routed from the ticket record
+    user_question: str
+    session_id: Optional[str] = None
+    product_line: Optional[str] = None # new: routed from the ticket record
 ```
 And thread it through the endpoint:
 ```python
 multipdf_chat/main.py
 @app.post('/chat/stream')
 def streamUserQuery(userQuery: UserQuery, request: Request):
-logger.info(f"User query: {userQuery}")
-return StreamingResponse(
-stream_user_input(
-request,
-userQuery.user_question,
-userQuery.session_id,
-userQuery.product_line,
-),
-media_type="text/plain",
-)
+    logger.info(f"User query: {userQuery}")
+    return StreamingResponse(
+        stream_user_input(
+            request,
+            userQuery.user_question,
+            userQuery.session_id,
+            userQuery.product_line,
+        ),
+        media_type="text/plain",
+    )
 ```
 Delete `user_input` from [helper.py:401](multipdf_chat/helper.py#L401) and
 the `/user_query` endpoint that calls it — the streaming path is the only
@@ -840,7 +842,7 @@ whatever you already have for sync:
 engine = create_engine(DATABASE_URL, ...)
 SessionLocal = sessionmaker(bind=engine, ...)
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-asyncpg is the driver; the URL prefix picks it
+# asyncpg is the driver; the URL prefix picks it
 ASYNC_DATABASE_URL = DATABASE_URL.replace(
     "postgresql://", "postgresql+asyncpg://", 1
 )
@@ -1060,111 +1062,273 @@ Concurrency benchmark shows measurable improvement (or you've documented
 why it didn't).
 Golden-set scores match step 3 within noise.
 ________________________________________
+
 ## Step 5 — Insufficient-evidence and conflicting-sources routing
-Duration: 2 days
-Ships: two new response modes, calibrated threshold, `baselines/step_05_evidence.json`
+
+Duration: 3 days
+Ships: two new response modes, typed figure extractor, calibrated
+threshold with cost matrix, structured routing events, `baselines/step_05_evidence.json`
 Right now the pipeline always answers. The doc (§3, "evidence check") calls
 for `insufficient_evidence` and `conflicting_sources` outcomes. These are
 worth doing before reranking because they change what "correct" means: an
 "I don't know" that routes to a human is a correct outcome for gd-006, not
 a failure.
-### Concepts to learn first
-Distance-threshold routing. Why "top result distance > 0.4" is a
-useful signal for insufficient evidence, and why the threshold is
-corpus-specific (must be measured, not guessed).
-Multi-source disagreement. How to detect "the top 3 parents come from
-different `doc_id`s with overlapping `product_line` but differ on a key
-Simple heuristics beat LLM judges here.
+Concepts to learn first
+Distance-threshold routing. Why "top result distance > τ" is a useful
+signal for insufficient evidence, and why τ is corpus-specific (must be
+measured, not guessed). Why a single threshold is fragile and a
+multi-signal router (absolute distance + top-1↔top-2 margin + score
+entropy) is more robust.
+Multi-source disagreement. How to detect "the top-k parents come from
+different `doc_id`s but disagree on a key figure". Why naive regex on raw
+dollar strings produces false conflicts (`$7` vs `$7.00`, `$1,000` vs `$1`
+from `{1,4}` truncation) and why figures need to be typed, normalised,
+and clustered by nearby noun phrase** before comparison.
+Cost-asymmetric calibration. Why a wrongly-refused answerable question
+and a missed refusal (hallucination) are not equally bad, and why the
+operating point should minimise expected cost under an explicit cost
+matrix, not raw error count.
+Why the obvious regex is wrong
+A first pass at `_figures()` reaches for:
+```python
+_MONEY_RE = re.compile(r"$\s?\d{1,4}(?:.\d{2})?")
+_PCT_RE = re.compile(r"\d+(?:.\d+)?\s%")
+```
+Don't ship it. Concrete breakages on this corpus:
+Input in a chunk
+Naive extract
+Correct
+`$1,000` (DPA caps)
+`$1` — `{1,4}` stops at the comma
+`$1000`
+`$12,345`
+`$12`, `$345` as two figures
+`$12345`
+`$7.00` vs `$7`
+different strings → false conflict
+same canonical `$7`
+`USD 7` / `7 dollars` / `seven dollars`
+not captured
+`$7`
+`18 % per year` vs `1.5%/month`
+both captured → false conflict
+semantically equivalent
+`up to $5` / `at least $5`
+both become `$5`, modifier dropped
+three different claims
+`30 days` / `30 months` / `30 bps`
+not captured
+durations and bps matter
+`$5 credit` vs `$5 fee`
+identical strings, context lost
+different claims
+Structural, not pattern, bugs:
+No canonicalisation. `$7` ≠ `$7.00` as strings, so set-difference
+invents conflicts.
+No typing. A duration, an amount, and a count all look like `30` once
+
+No context window. Raw numbers compared across whole parent chunks
+without knowing what figure is being talked about.
+Arbitrary 50% jaccard with no justification.
+No reference to the question. If the user asked about late fees, only
+late-fee figures should drive the conflict check.
+The routing module below fixes the structural problems in scope for this
+step; the full semantic-contradiction detector (NLI model) is deferred to a
+later step — see Deferred to later steps below.
 Routing module
 Create `multipdf_chat/routing.py`:
 ```python
 """Post-retrieval routing: answer / refuse / flag for human."""
+import os
 import re
 from dataclasses import dataclass, field
+from decimal import Decimal
+from enum import Enum
 from typing import Literal, Optional
 from multipdf_chat.retrieval import RetrievedParent
 Calibrated per step 5 tasks. See eval/calibrate_threshold.py.
-DEFAULT_DISTANCE_THRESHOLD = 0.40
-_MONEY_RE = re.compile(r"$\s?\d{1,4}(?:.\d{2})?")
-_PCT_RE = re.compile(r"\d+(?:.\d+)?\s%")
-
+Env-overridable so operators can hot-swap without a redeploy.
+DEFAULT_DISTANCE_THRESHOLD = float(os.getenv("ROUTING_DISTANCE_THRESHOLD", "0.40"))
+Below this absolute margin between top-1 and top-2, treat as uncertain.
+DEFAULT_MARGIN_THRESHOLD = float(os.getenv("ROUTING_MARGIN_THRESHOLD", "0.03"))
+Short queries get a tighter threshold — distances are less reliable.
+SHORT_QUERY_TOKEN_LIMIT = 3
 Status = Literal["answered", "insufficient_evidence", "conflicting_sources"]
+
+class ReasonCode(str, Enum):
+    NO_CANDIDATES = "NO_CANDIDATES"
+    TOP_DISTANCE_HIGH = "TOP_DISTANCE_HIGH"
+    LOW_MARGIN = "LOW_MARGIN"
+    SHORT_QUERY_NO_FILTER = "SHORT_QUERY_NO_FILTER"
+    FIGURE_CONFLICT = "FIGURE_CONFLICT"
+    OK = "OK"
+
+@dataclass(frozen=True)
+class Figure:
+    """A typed, normalised numeric fact with its lexical context."""
+    kind: Literal["money", "pct", "duration_days", "bps"]
+    value: Decimal # canonical magnitude (USD, %, days, or bps)
+    cluster: str # nearest fee/concept noun phrase, lowercased
+
+    def key(self) -> tuple:
+        # 2-decimal rounding so $7 and $7.00 compare equal.
+        return (self.kind, self.cluster, self.value.quantize(Decimal("0.01")))
 
 @dataclass
 class RoutingDecision:
     status: Status
+    reason_code: ReasonCode
     reason: str
     parents: list[RetrievedParent] = field(default_factory=list)
+    features: dict = field(default_factory=dict) # logged for observability
 
-def _figures(text: str) -> frozenset[str]:
-    """Extract dollar amounts and percentages as normalised strings."""
-    money = {m.replace(" ", "") for m in _MONEY_RE.findall(text)}
-    pct = {p.replace(" ", "") for p in _PCT_RE.findall(text)}
-    return frozenset(money | pct)
+--- Figure extraction -------------------------------------------------------
+Allow optional thousands separators and optional cents.
+_MONEY_RE = re.compile(r"$\s?(\d{1,3}(?:,\d{3})|\d+)(?:.(\d{2}))?")
+_PCT_RE = re.compile(r"(\d+(?:.\d+)?)\s%")
+_DAYS_RE = re.compile(r"(\d+)\s(?:calendar\s+)?day(?:s)?", re.IGNORECASE)
+_BPS_RE = re.compile(r"(\d+(?:.\d+)?)\s(?:bps|basis\s+points)", re.IGNORECASE)
+Noun phrases we care about — extend as the corpus grows.
+_CLUSTER_VOCAB = (
+    "late fee", "activation fee", "early termination fee", "etf",
+    "returned payment fee", "restocking fee", "cancellation fee",
+    "interest", "apr", "dispute window", "return window",
+)
 
+def _nearest_cluster(text: str, span_start: int, window: int = 60) -> str:
+    """Lowercased noun phrase from a window around the match; '' if none."""
+    lo = max(0, span_start - window)
+    hi = min(len(text), span_start + window)
+    hay = text[lo:hi].lower()
+    for phrase in _CLUSTER_VOCAB:
+        if phrase in hay:
+            return phrase
+    return ""
+
+def _money(raw_int: str, raw_cents: Optional[str]) -> Decimal:
+    whole = Decimal(raw_int.replace(",", ""))
+    cents = Decimal(raw_cents) / Decimal(100) if raw_cents else Decimal(0)
+    return whole + cents
+
+def extract_figures(text: str) -> list[Figure]:
+    out: list[Figure] = []
+    for m in _MONEY_RE.finditer(text):
+        out.append(Figure("money", _money(m.group(1), m.group(2)),
+                          _nearest_cluster(text, m.start())))
+    for m in _PCT_RE.finditer(text):
+        out.append(Figure("pct", Decimal(m.group(1)),
+                          _nearest_cluster(text, m.start())))
+    for m in _DAYS_RE.finditer(text):
+        out.append(Figure("duration_days", Decimal(m.group(1)),
+                          _nearest_cluster(text, m.start())))
+    for m in _BPS_RE.finditer(text):
+        out.append(Figure("bps", Decimal(m.group(1)),
+                          _nearest_cluster(text, m.start())))
+    return out
+
+--- Conflict detection ------------------------------------------------------
 def _figures_conflict(parents: list[RetrievedParent], top_n: int = 3) -> Optional[str]:
     """
-    Return a reason string if the top-N parents from different docs disagree
-    on key figures. Returns None if there's no conflict or not enough
-    distinct docs to detect one.
+    Flag a conflict when distinct docs produce >1 distinct canonical value
+    for the SAME (kind, cluster). Equivalence (e.g. $7 vs $7.00) is handled
+    by the Figure.key() rounding.
     """
     seen_docs: set[str] = set()
-    per_doc: list[tuple[str, frozenset[str]]] = []
+    # (kind, cluster) -> {canonical_value: {doc_slug, ...}}
+    by_bucket: dict[tuple[str, str], dict[Decimal, set[str]]] = {}
     for p in parents[:top_n]:
         if p.doc_slug in seen_docs:
             continue
         seen_docs.add(p.doc_slug)
-        figs = _figures(p.content)
-        if figs:
-            per_doc.append((p.doc_slug, figs))
-    if len(per_doc) < 2:
-        return None
-    all_figs = set().union((f for _, f in per_doc))
-    shared = set.intersection((set(f) for _, f in per_doc))
-    # If <50% of figures are shared across docs, treat as conflict.
-    if all_figs and len(shared) / len(all_figs) < 0.5:
-        docs = ", ".join(slug for slug, _ in per_doc)
-        return f"figures diverge across {docs}"
+        for fig in extract_figures(p.content):
+            if not fig.cluster:
+                continue # unanchored figures are too noisy to compare
+            bucket = by_bucket.setdefault((fig.kind, fig.cluster), {})
+            bucket.setdefault(fig.key()[2], set()).add(p.doc_slug)
+    for (kind, cluster), values in by_bucket.items():
+        if len(values) >= 2 and sum(len(docs) for docs in values.values()) >= 2:
+            summary = ", ".join(
+                f"{v} ({'/'.join(sorted(d))})" for v, d in values.items()
+            )
+            return f"{cluster} ({kind}) diverges: {summary}"
     return None
 
+--- Router ------------------------------------------------------------------
 def route(
-    parents: list[RetrievedParent],
-    product_line: Optional[str],
-    distance_threshold: float = DEFAULT_DISTANCE_THRESHOLD,
+        question: str,
+        parents: list[RetrievedParent],
+        product_line: Optional[str],
+        distance_threshold: float = DEFAULT_DISTANCE_THRESHOLD,
+        margin_threshold: float = DEFAULT_MARGIN_THRESHOLD,
 ) -> RoutingDecision:
+    features: dict = {
+        "n_candidates": len(parents),
+        "product_line": product_line,
+        "query_tokens": len(question.split()),
+    }
     if not parents:
-        return RoutingDecision("insufficient_evidence", "no candidates returned")
-    if parents[0].distance > distance_threshold:
+        return RoutingDecision("insufficient_evidence",
+                               ReasonCode.NO_CANDIDATES,
+                               "no candidates returned", features=features)
+    top = parents[0]
+    features["top_distance"] = top.distance
+    features["top_doc"] = top.doc_slug
+    margin = (parents[1].distance - top.distance) if len(parents) > 1 else 1.0
+    features["margin"] = margin
+    # Short query without a product_line filter is almost always ambiguous —
+    # force clarification rather than guess.
+    if (features["query_tokens"] <= SHORT_QUERY_TOKEN_LIMIT
+            and product_line is None):
         return RoutingDecision(
-            "insufficient_evidence",
-            f"top distance {parents[0].distance:.3f} > threshold {distance_threshold}",
-            parents,
+            "insufficient_evidence", ReasonCode.SHORT_QUERY_NO_FILTER,
+            f"short query ({features['query_tokens']} tokens) with no product_line",
+            parents, features,
+        )
+    if top.distance > distance_threshold:
+        return RoutingDecision(
+            "insufficient_evidence", ReasonCode.TOP_DISTANCE_HIGH,
+            f"top distance {top.distance:.3f} > threshold {distance_threshold}",
+            parents, features,
+        )
+    if margin < margin_threshold and product_line is None:
+        return RoutingDecision(
+            "insufficient_evidence", ReasonCode.LOW_MARGIN,
+            f"top-1 vs top-2 margin {margin:.3f} < {margin_threshold}",
+            parents, features,
         )
     # Only look for conflicts when the caller didn't pin a product_line —
     # with a filter in place, the doc set is already narrowed.
     if product_line is None:
         conflict = _figures_conflict(parents)
         if conflict:
-            return RoutingDecision("conflicting_sources", conflict, parents)
-    return RoutingDecision("answered", "", parents)
+            return RoutingDecision("conflicting_sources",
+                                   ReasonCode.FIGURE_CONFLICT,
+                                   conflict, parents, features)
+    return RoutingDecision("answered", ReasonCode.OK, "", parents, features)
 ```
 Threshold calibration
-Create `eval/calibrate_threshold.py`:
+Create `eval/calibrate_threshold.py`. Sweep distance thresholds against the
+golden set, print a confusion matrix per threshold, and pick the operating
+point that minimises expected cost given explicit per-error costs.
 ```python
 """
-Sweep distance thresholds against the golden set. Print a confusion matrix
-per threshold so you can pick the operating point deliberately.
-Insufficient-evidence golden items should refuse; answerable items should
-not. The right threshold minimises 'wrongly refused' without letting too
-many 'missed refusals' through.
+Sweep distance thresholds against the golden set. Report a confusion matrix
+and expected cost per threshold so the operating point is a deliberate
+business decision, not a guess.
+A wrongly-refused answerable item frustrates a user (cost 1).
+A missed refusal (hallucinated answer on an out-of-scope item) is worse
+(cost 5 by default) — tune per your incident history.
 """
 import json
+import os
 from pathlib import Path
 from langchain_huggingface import HuggingFaceEmbeddings
 from multipdf_chat.db import SessionLocal
 from multipdf_chat.retrieval import retrieve
 
 THRESHOLDS = [0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55]
+COST_WRONG_REFUSE = float(os.getenv("COST_WRONG_REFUSE", "1"))
+COST_MISSED_REFUSE = float(os.getenv("COST_MISSED_REFUSE", "5"))
 
 def main():
     items = [
@@ -1180,73 +1344,81 @@ def main():
     per_item = []
     for item in items:
         parents = retrieve(
-            db, embeddings, item["question"], item.get("product_line"), k=1
+            db, embeddings, item["question"], item.get("product_line"), k=2
         )
         per_item.append({
             "id": item["id"],
             "expected": item.get("expected_status", "answered"),
             "top_distance": parents[0].distance if parents else 1.0,
+            "margin": (parents[1].distance - parents[0].distance) if len(parents) > 1 else 1.0,
             "top_doc": parents[0].doc_slug if parents else None,
         })
     db.close()
-    print(f"{'thr':>6} {'correct_refuse':>15} {'missed_refuse':>15} "
-          f"{'wrong_refuse':>13} {'correct_answer':>15}")
-    for thr in THRESHOLDS:
-        tp = sum(1 for d in per_item
-                 if d["expected"] == "insufficient_evidence" and d["top_distance"] > thr)
-        fn = sum(1 for d in per_item
-                 if d["expected"] == "insufficient_evidence" and d["top_distance"] <= thr)
-        fp = sum(1 for d in per_item
-                 if d["expected"] == "answered" and d["top_distance"] > thr)
-        tn = sum(1 for d in per_item
-                 if d["expected"] == "answered" and d["top_distance"] <= thr)
-        print(f"{thr:>6.2f} {tp:>15} {fn:>15} {fp:>13} {tn:>15}")
-    # Diagnostic: list borderline items so you can eyeball them
-    print("
-borderline items (top_distance between 0.30 and 0.50):")
-    for d in sorted(per_item, key=lambda x: x["top_distance"]):
-        if 0.30 <= d["top_distance"] <= 0.50:
-            print(f" {d['id']:12} exp={d['expected']:22} "
-                  f"d={d['top_distance']:.3f} {d['top_doc']}")
+    print(f"{'thr':>6} {'correct_refuse':>15} {'missed_refuse':>14} "
+          f"{'wrong_refuse':>13} {'correct_answer':>15} {'exp_cost':>10}")
+for thr in THRESHOLDS:
+    tp = sum(1 for d in per_item
+             if d["expected"] == "insufficient_evidence" and d["top_distance"] > thr)
+    fn = sum(1 for d in per_item
+             if d["expected"] == "insufficient_evidence" and d["top_distance"] <= thr)
+    fp = sum(1 for d in per_item
+             if d["expected"] == "answered" and d["top_distance"] > thr)
+    tn = sum(1 for d in per_item
+             if d["expected"] == "answered" and d["top_distance"] <= thr)
+    cost = fn * COST_MISSED_REFUSE + fp * COST_WRONG_REFUSE
+    print(f"{thr:>6.2f} {tp:>15} {fn:>14} {fp:>13} {tn:>15} {cost:>10.1f}")
+# Diagnostic: borderline items for human review
+print("\nborderline items (top_distance between 0.30 and 0.50):")
+for d in sorted(per_item, key=lambda x: x["top_distance"]):
+    if 0.30 <= d["top_distance"] <= 0.50:
+        print(f" {d['id']:12} exp={d['expected']:22} "
+              f"d={d['top_distance']:.3f} m={d['margin']:.3f} {d['top_doc']}")
 
 if __name__ == "__main__":
     main()
 ```
+Record the chosen threshold and the cost assumptions in
+`baselines/step_05_evidence.json` so future reviewers can see why `0.40`
+(or whatever) was picked.
 Wire routing into the stream
 Update `stream_user_input`:
 ```python
 import json as _json
+import logging
 from multipdf_chat.routing import route
+_log = logging.getLogger("routing")
 async def stream_user_input(request, user_question, session_id, product_line=None):
-    embeddings = request.app.state.embeddings
-    async with request.app.state.async_db() as db:
-        parents = await retrieve_async(db, embeddings, user_question,
-                                        product_line, k=10)
-        decision = route(parents, product_line)
-        if decision.status == "insufficient_evidence":
-            yield _json.dumps({
-                "status": "insufficient_evidence",
-                "reason": decision.reason,
-                "message": (
-                    "I don't have enough information in the policy documents "
-                    "to answer this confidently. Please provide more context "
-                    "(e.g., which product) or route to a human agent."
-                ),
-            })
-            return
-        if decision.status == "conflicting_sources":
-            yield _json.dumps({
-                "status": "conflicting_sources",
-                "reason": decision.reason,
-                "candidate_docs": sorted({p.doc_slug for p in parents[:3]}),
-                "message": (
-                    "The policies differ across products. Please clarify "
-                    "which product this ticket is about."
-                ),
-            })
-            return
-        # ... normal generation path (unchanged from step 4) ...
-```
+embeddings = request.app.state.embeddings
+async with request.app.state.async_db() as db:
+parents = await retrieve_async(db, embeddings, user_question,
+product_line, k=10)
+decision = route(user_question, parents, product_line)
+# One structured event per request — drives dashboards and alerting.
+_log.info("routing_event", extra={
+"session_id": session_id,
+"status": decision.status,
+"reason_code": decision.reason_code.value,
+decision.features,
+})
+if decision.status == "insufficient_evidence":
+yield _json.dumps({
+"status": "insufficient_evidence",
+"reason_code": decision.reason_code.value,
+"reason": decision.reason,
+"message": (
+"I don't have enough information in the policy documents "
+"to answer this confidently. Please provide more context "
+"(e.g., which product) or route to a human agent."
+),
+})
+return
+if decision.status == "conflicting_sources":
+yield _json.dumps({
+"status": "conflicting_sources",
+"reason_code": decision.reason_code.value,
+"reason": decision.reason,
+"candidate_docs": sorted({p.doc_slug for p in parents[:3]}),
+"message": (
 "The policies differ across products. Please clarify "
 "which product this ticket is about."
 ),
@@ -1261,10 +1433,10 @@ def score_generation(item, answer_text: str):
     """String checks plus status routing."""
     ans_lower = answer_text.lower()
     expected_status = item.get("expected_status", "answered")
-    # A refusal from the router will be a JSON blob starting with a status field
-    refused = '"status": "insufficient_evidence"' in answer_text \
-        or '"status": "conflicting_sources"' in answer_text
-    if expected_status == "insufficient_evidence":
+    # A refusal from the router is a JSON blob with a status field.
+    refused = ('"status": "insufficient_evidence"' in answer_text
+               or '"status": "conflicting_sources"' in answer_text)
+    if expected_status in ("insufficient_evidence", "conflicting_sources"):
         return {
             "routing_pass": refused,
             "must_include_pass": None, # not scored on refusals
@@ -1283,27 +1455,125 @@ def score_generation(item, answer_text: str):
         "must_not_include_violations": exclude_hits,
     }
 ```
-Add `routing_pass_rate` to the summary via `_pass_rate("routing_pass")`.
-### Tasks
-
-- Create `multipdf_chat/routing.py` (code above).
-- Create `eval/calibrate_threshold.py`. Run it. Pick a threshold — probably
-  0.35–0.45 for MiniLM-L6-v2 on this corpus. Update
-  `DEFAULT_DISTANCE_THRESHOLD` in `routing.py`.
-- Wire `route()` into `stream_user_input`.
-- Extend `score_generation` in the harness to score `routing_pass`.
-- Add 2 more insufficient-evidence items to the golden set if the calibration
-  shows you have fewer than 3.
-- Run the harness, record `baselines/step_05_evidence.json`.
-- gd-006 should now show `routing_pass = true`. Verify that answerable
-  items are not being wrongly refused — check `routing_pass_rate` on
-  items where `expected_status = "answered"`.
-
-### Done when
+Add `routing_pass_rate` to the summary via `_pass_rate("routing_pass")`,
+broken down by `expected_status` so wrong-refusals and missed-refusals are
+visible separately.
+Extend the golden set
+Current coverage leans on `insufficient_evidence`; this step needs explicit
+`conflicting_sources` items, a short-query item, and adversarial coverage.
+Append the following 22 items (`gd-029 … gd-050`) to
+[../../eval/golden_v1.jsonl]eval/golden_v1.jsonl:
+id
+What it drives
+gd-029
+short-query guard (2 tokens, no product_line)
+gd-030
+first explicit `conflicting_sources` test
+gd-031
+30-vs-60 Fios dispute window — NLI-flavoured conflict
+gd-032
+multi-intent, two facts, same product_line → answer
+gd-033
+long conditional query → answer
+gd-034
+half-in-corpus trap (Verizon vs AT&T) → refuse
+gd-035
+Spanish paraphrase (English-only corpus gap)
+gd-036
+prompt-injection → refuse without echoing
+gd-037
+doc-dump exfiltration → refuse
+gd-038
+misspelling robustness
+gd-039
+cross-state comparison in one doc → answer, not conflict
+gd-040
+short query with product_line → answer
+gd-041
+DPA 0% APR, Fios 18% must not bleed in
+gd-042
+unit-mismatch question (USF in bps) → refuse
+gd-043
+wrong-assumption question → correct, don't confirm
+gd-044
+equipment-return fee vs bill late fee — leakage test
+gd-045
+cross-doc same-product_line → answer, not conflict
+gd-046
+empty-query degenerate case
+gd-047
+written-out numbers (drives the normaliser requirement)
+gd-048
+two-fact multi-intent, same doc
+gd-049
+acronym-heavy short query (ETF)
+gd-050
+product-hint in question text (future query-NER target)
+gd-031 and gd-047 are expected to stay failing until the semantic-NLI
+checker lands in a later step — they're the regression tests that justify
+that work. gd-050 is likewise expected-fail; it documents the gap a future
+query-side NER step will close.
+Tasks
+Create `multipdf_chat/routing.py` (code above). Unit-test
+`extract_figures` and `_figures_conflict` on hand-written strings
+covering comma amounts, `$X.00` vs `$X`, days vs money, and
+same-figure/different-cluster cases.
+Append `gd-029 … gd-050` to `eval/golden_v1.jsonl`. Verify
+`_verify: true` items against PDFs.
+Create `eval/calibrate_threshold.py`. Run it. Pick a threshold —
+probably 0.35–0.45 for MiniLM-L6-v2 on this corpus — using the
+expected-cost column, not raw error count. Update
+`DEFAULT_DISTANCE_THRESHOLD` in `routing.py` (or set
+`ROUTING_DISTANCE_THRESHOLD` env var).
+Wire `route()` into `stream_user_input`. Confirm one `routing_event`
+log line per request with the full feature dict.
+Extend `score_generation` in the harness to score `routing_pass` for
+both `insufficient_evidence` and `conflicting_sources`.
+Run the harness, record `baselines/step_05_evidence.json`, including:
+chosen threshold, cost assumptions, confusion matrix, embedding model
+id, golden-set file hash.
+gd-006 and gd-030 should show `routing_pass = true`. Verify
+answerable items are not being wrongly refused — check
+`routing_pass_rate` on items where `expected_status = "answered"`.
+Done when
 gd-006 returns a refusal, not a merged answer.
-The threshold was chosen from measurement, not guessed.
-`routing_pass_rate` appears in the summary; commit message diffs it
-against step 4.
+gd-030 returns `conflicting_sources`, listing all three candidate docs.
+The threshold was chosen by minimising expected cost under an explicit
+cost matrix, not guessed.
+`routing_pass_rate` appears in the summary, broken down by expected
+status; commit message diffs it against step 4.
+Every production request emits a `routing_event` log line with the full
+feature dict (distance, margin, reason_code, product_line).
+`baselines/step_05_evidence.json` records the embedding model id and
+golden-set hash alongside the chosen threshold.
+Deferred to later steps (production hardening)
+Called out here so the gap is explicit, not forgotten:
+Semantic contradiction via NLI. Replace `_figures_conflict` with (or
+augment it by) a cross-encoder NLI model
+(`cross-encoder/nli-deberta-v3-small`) over top-sentence pairs from
+different docs. Catches gd-031 (30-vs-60 days) and other
+non-numeric contradictions that regex cannot see.
+Hybrid retrieval agreement. Run BM25 in parallel (comes free with
+step 6) and treat sparse/dense disagreement as a confidence signal.
+Query classifier. Tiny model trained on `golden_v1.jsonl` +
+synthetic negatives, predicting `answerable | out_of_scope | ambiguous`.
+Short-circuits competitor/off-topic queries (gd-027, gd-034) before
+retrieval runs.
+Clarification mode. When `product_line is None` and top candidates
+straddle product lines, ask a targeted follow-up ("Fios or wireless?")
+instead of refusing. Better UX for gd-006 than a flat "I don't know."
+Per-bucket thresholds. Fit distinct thresholds per query-length
+bucket and per `product_line` once enough items exist. Short queries
+have systematically different distance distributions than long ones.
+Self-consistency check. For borderline cases, generate the answer,
+re-embed it, and check closeness to its cited chunks.
+Observability. Dashboards for refusal-rate and conflict-rate over
+time, broken down by `product_line` and `reason_code`. Alert on sudden
+shifts (model drift, corpus change, prompt-injection wave).
+Feedback loop. Capture user feedback on refusals ("was this the
+right call?") and append reviewed items to a `golden_prod_v1.jsonl`
+regression file so the eval set grows with real usage.
+
 ________________________________________
 ## Step 6 — Hybrid retrieval: BM25 alongside vectors
 Duration: 3 days
