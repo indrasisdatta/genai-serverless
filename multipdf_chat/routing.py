@@ -7,8 +7,8 @@ from dataclasses import dataclass, field
 from multipdf_chat.retrieval import RetrievedParent
 import re
 
-DEFAULT_DISTANCE_THRESHOLD = float(os.getenv("ROUTING_DISTANCE_THRESHOLD", "0.40"))
-DEFAULT_MARGIN_THRESHOLD = float(os.getenv("ROUTING_MARGIN_THRESHOLD", "0.03"))
+DEFAULT_DISTANCE_THRESHOLD = float(os.getenv("ROUTING_DISTANCE_THRESHOLD", "0.35"))
+DEFAULT_MARGIN_THRESHOLD = float(os.getenv("ROUTING_MARGIN_THRESHOLD", "0.04"))
 SHORT_QUERY_TOKEN_LIMIT = 3
 
 Status = Literal["answered", "insufficient_evidence", "conflicting_sources"]
@@ -42,12 +42,6 @@ class RoutingDecision:
 
 # --- Figure extraction ------------------------------------------------------
 
-# Allow optional thousands separators and optional cents.
-# _MONEY_RE = re.compile(r"$\s?(\d{1,3}(?:,\d{3})|\d+)(?:.(\d{2}))?")
-# _PCT_RE = re.compile(r"(\d+(?:.\d+)?)\s%")
-# _DAYS_RE = re.compile(r"(\d+)\s(?:calendar\s+)?day(?:s)?", re.IGNORECASE)
-# _BPS_RE = re.compile(r"(\d+(?:.\d+)?)\s(?:bps|basis\s+points)", re.IGNORECASE)
-
 _MONEY_RE = re.compile(
     r"\$\s?(\d{1,3}(?:,\d{3})*|\d+)(?:\.(\d{2}))?"
 )
@@ -60,6 +54,8 @@ _BPS_RE = re.compile(
     r"(\d+(?:\.\d+)?)\s(?:bps|basis\s+points)",
     re.IGNORECASE
 )
+
+_DAYS_RE = re.compile(r"(\d+)\s(?:calendar\s+)?day(?:s)?", re.IGNORECASE)
 
 # Noun phrases we care about — extend as the corpus grows.
 _CLUSTER_VOCAB = (

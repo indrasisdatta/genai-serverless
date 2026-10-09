@@ -56,7 +56,6 @@ def score_retrieval(item, retrieved, k_values=(1,5,10)):
                 mrr = 1.0 / rank
                 break
         scores["mrr"] = mrr
-    return scores
 
     # Did we retrieve the expected section within top 5?
     hit = False
@@ -73,23 +72,32 @@ def score_retrieval(item, retrieved, k_values=(1,5,10)):
     else:
         scores["section_hit@5"] = None
 
+    return scores
+
 def score_generation(item, answer_text: str):
-    """String checks. Case-insensitive. Empty must-lists score as passing."""
-    ans_lower = answer_text.lower() 
+    """String checks plus status routing."""
+    ans_lower = answer_text.lower()
+    expected_status = item.get("expected_status", "answered")
+    # A refusal from the router is a JSON blob with a status field.
+    refused = ('"status": "insufficient_evidence"' in answer_text
+               or '"status": "conflicting_sources"' in answer_text)
+    if expected_status in ("insufficient_evidence", "conflicting_sources"):
+        return {
+            "routing_pass": refused,
+            "must_include_pass": None, # not scored on refusals
+            "must_not_include_pass": (
+                not any(s.lower() in ans_lower for s in item.get("must_not_include") or [])
+            ),
+        }
     must_include = item.get("must_include") or []
     must_not_include = item.get("must_not_include") or []
     include_hits = [s for s in must_include if s.lower() in ans_lower]
     exclude_hits = [s for s in must_not_include if s.lower() in ans_lower]
-    
     return {
+        "routing_pass": not refused, # answerable items must NOT refuse
         "must_include_pass": len(include_hits) == len(must_include),
-        "must_include_hit_rate": (
-            len(include_hits) / len(must_include) if must_include else None
-        ),
         "must_not_include_pass": len(exclude_hits) == 0,
-        "must_not_include_hit_rate": (
-            len(exclude_hits) / len(must_not_include) if must_not_include else None
-        ),
+        "must_not_include_violations": exclude_hits,
     }
 
 def generate_answer(retrieved, question: str) -> str:

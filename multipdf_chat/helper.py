@@ -35,6 +35,8 @@ from multipdf_chat.retrieval import retrieve_async
 from multipdf_chat.logging_context import get_request_id
 import time
 
+from multipdf_chat.routing import route
+
 load_dotenv()
 
 S3_STORAGE_ENABLED = (
@@ -44,6 +46,8 @@ S3_STORAGE_ENABLED = (
 DOCUMENT_STORAGE_ROOT = Path(os.getenv('DOCUMENT_STORAGE_ROOT', './srv'))
 
 logger = logging.getLogger("api")
+
+_log = logging.getLogger("routing")
 
 def setup_logging():
     handler = logging.StreamHandler(sys.stdout)
@@ -481,12 +485,41 @@ async def stream_user_input(request: Request, user_question, product_line=None):
     async with request.app.state.async_db() as db:
         parents = await retrieve_async(db, embeddings, user_question, product_line, k=10)
 
-        if not parents: 
-            logger.info("generation_skipped", extra={
-                "request_id": request_id, "reason": "no_parents",
+        decision = route(user_question, parents, product_line)
+
+        # One structured event per request — drives dashboards and alerting.
+        _log.info("routing_event", extra={
+            "request_id": request_id,
+            "status": decision.status,
+            "reason_code": decision.reason_code.value,
+            "decision.features": decision.features
+        })
+
+        if decision.status == "insufficient_evidence":
+            yield json.dumps({
+                "status": "insufficient_evidence",
+                "reason_code": decision.reason_code.value,
+                "reason": decision.reason,
+                "message": (
+                    "I don't have enough information in the policy documents "
+                    "to answer this confidently. Please provide more context "
+                    "(e.g., which product) or route to a human agent."
+                ),
             })
-            yield "No relevant data found"
-            return 
+            return
+
+        if decision.status == "conflicting_sources":
+            yield json.dumps({
+                "status": "conflicting_sources",
+                "reason_code": decision.reason_code.value,
+                "reason": decision.reason,
+                "candidate_docs": sorted({p.doc_slug for p in parents[:3]}),
+                "message": (
+                    "The policies differ across products. Please clarify "
+                    "which product this ticket is about."
+                ),
+            })
+            return
 
         docs = [
             Document(

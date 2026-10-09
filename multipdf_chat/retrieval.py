@@ -29,7 +29,6 @@ def retrieve(
     product_line: Optional[str] = None,
     k: int = 10
 ) -> list[RetrievedParent]:
-
     """
     Step 1 baseline: uses the current unfiltered/ungrouped query so we can
     record where we're starting from. The `product_line` argument is
