@@ -9,6 +9,7 @@ from multipdf_chat.api.create_file_embeddings_handler import create_file_embeddi
 from multipdf_chat.api.query import query_answer
 from typing import List
 
+from multipdf_chat.bm25 import build_bm25
 from multipdf_chat.db import (
     SessionLocal,
     AsyncSessionLocal,
@@ -35,6 +36,12 @@ async def lifespan(app: FastAPI):
             model_name="sentence-transformers/all-MiniLM-L6-v2",
             model_kwargs={"device": "cpu"}
         )
+        # Build BM25 once at startup
+        with SessionLocal() as db:
+            app.state.bm25 = build_bm25(db)
+            logger.info("bm25 built", extra={
+                "bm_chunks": len(app.state.bm25.parent_ids)
+            })
 
         yield
 
@@ -46,6 +53,7 @@ async def lifespan(app: FastAPI):
         app.state.db = None 
         app.state.async_db = None
         app.state.embeddings = None
+        app.state.bm25 = None
 
 
 app = FastAPI(lifespan=lifespan)
