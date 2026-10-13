@@ -4,6 +4,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from multipdf_chat.bm25 import BM25Index, bm25_search
 from multipdf_chat.logging_context import get_request_id
 import time 
 import logging
@@ -21,6 +22,210 @@ class RetrievedParent:
     authority_tier: Optional[int] = None 
 
 logger = logging.getLogger("api")
+
+def _rrf(
+    rankings: list[list[str]],
+    k_rrf: int = 69
+) -> list[str]:
+    """
+    Reciprocal Rank Fusion. Returns fused parent_ids in descending order.
+    Input: 
+        rankings = [
+            ["doc_1", "doc_2", "doc_3"],  # Vector Search ranking
+            ["doc_2", "doc_4", "doc_1"]   # BM25 ranking
+        ]
+    Output: ["doc_2", "doc_1", "doc_4", "doc_3"] 
+    """
+    scores: dict[str, float] = {}
+    for ranking in rankings:
+        for rank, pid in enumerate(ranking, start=1):
+            scores[pid] = scores.get(pid, 0.0) + 1.0 / (k_rrf + rank)
+
+    return [
+        pid 
+        for pid, _ in sorted(
+            scores.items(),
+            key=lambda x: x[1],
+            reverse=True
+        ) 
+    ]
+
+async def retrieve_hybrid_async(
+    db: AsyncSession,
+    embeddings,
+    bm25_index: BM25Index,
+    user_question: str,
+    product_line: Optional[str] = None,
+    k: int = 10,
+    fetch_multiplier: int = 3
+) -> list[RetrievedParent]:
+    """
+    Vector top-N + BM25 top-N, fused with RRF, then final top-k.
+    We oversample by `fetch_multiplier` to give RRF room to reorder.
+    """
+    request_id = get_request_id()
+    n = k * fetch_multiplier
+    logger.info("retrieval_started", extra={
+        "request_id": request_id,
+        "k": k,
+        "product_line": product_line,
+        "question_len": len(user_question),
+    })
+
+    # Vector arm
+    vector_parents = await retrieve_async(
+        db, embeddings, user_question, product_line, k=n
+    )
+
+    vec_ranking = [p.parent_id for p in vector_parents]
+
+    # BM25 arm (sync, but tiny — no need to thread it out)
+    bm25_ranking = bm25_search(bm25_index, user_question, product_line, k=n)
+
+    # Fuse
+    fused = _rrf([vec_ranking, bm25_ranking])[:k]
+
+    # Materialise: reuse the parents we already fetched, look up the rest.
+    by_id: dict[str, RetrievedParent] = {p.parent_id: p for p in vector_parents}
+    missing = [pid for pid in fused if pid not in by_id]
+
+    if missing:
+        result = await db.execute(
+            text("""
+            SELECT 
+                p.id AS parent_id, d.slug AS doc_slug,
+                d.title AS doc_title, d.source_url,
+                d.authority_tier, p.section_path, p.content
+            FROM parent_documents p
+            JOIN documents d ON d.doc_id = p.doc_id
+            WHERE p.id = ANY(:ids) AND d.status = 'active'
+            """),
+            {"ids": missing}
+        )
+        for r in result.mappings().all():
+            by_id[str(r['parent_id'])] = RetrievedParent(
+                parent_id=str(r["parent_id"]),
+                doc_slug=r["doc_slug"],
+                doc_title=r["doc_title"],
+                section_path=r["section_path"],
+                content=r["content"],
+                distance=float("nan"), # BM25-only hit; no vector distance
+                source_url=r["source_url"],
+                authority_tier=r["authority_tier"],
+            )
+
+    ordered = [by_id[pid] for pid in fused if pid in by_id]
+
+    logger.info("retrieval_fused", extra={
+        "request_id": request_id,
+        "vector_top1": vec_ranking[0] if vec_ranking else None,
+        "bm25_top1": bm25_ranking[0] if bm25_ranking else None,
+        "fused_top1_source": (
+            "both" if vec_ranking and bm25_ranking and vec_ranking[0] == bm25_ranking[0]
+            else "vector" if fused and fused[0] in vec_ranking[:3]
+            else "bm25"
+        ),
+        "n_fused": len(ordered),
+    })
+
+    return ordered
+
+    t_embed_start = time.perf_counter()
+    # Embed query is CPU bound - push it off the event loop
+    query_embedding = await asyncio.to_thread(embeddings.embed_query, user_question)
+
+    # query_embedding = embeddings.embed_query(user_question)
+
+    embed_ms = round((time.perf_counter() - t_embed_start) * 1000)
+    
+    # WHERE metadata ->> 'session_id' = :session_id 
+
+    # Find nearest child chunks - order by cosine distance between stored embeddings and query embedding
+    t_sql_start = time.perf_counter()
+    result = await db.execute(
+        text("""
+            SELECT 
+                parent_id,
+                embedding <=> CAST(:embedding AS vector) AS distance 
+            FROM child_chunks                 
+            ORDER BY distance
+            LIMIT :limit
+        """),
+        {
+            # "session_id": session_id,
+            "embedding": str(query_embedding),
+            "limit": k
+        }
+    )
+    child_rows = result.fetchall() 
+
+    if not child_rows: 
+        return []
+
+    # Store unique parent ids 
+    parent_ids: list[str] = []
+    dist_by_parent: dict[str, float] = {}
+
+    for row in child_rows:
+        pid = str(row.parent_id)
+        if pid not in dist_by_parent:
+            dist_by_parent[pid] = row.distance
+            parent_ids.append(pid)
+        if len(parent_ids) >= k: 
+            break
+
+    if not parent_ids: 
+        return []
+
+    # Fetch parent documents 
+    result = await db.execute(
+        text("""
+            SELECT 
+                p.id AS parent_id, 
+                d.slug AS doc_slug,
+                d.title AS doc_title,
+                d.source_url,
+                d.authority_tier,
+                p.section_path, 
+                p.content 
+            FROM 
+                parent_documents p JOIN documents d ON p.doc_id = d.doc_id 
+            WHERE p.id = ANY(CAST(:ids AS uuid[]))
+        """),
+        {"ids": parent_ids}
+    )
+    parents = result.mappings().all()
+
+    by_id = { str(p['parent_id']): p for p in parents }
+
+    ordered =  [ by_id[pid] for pid in parent_ids if pid in by_id ]
+
+    sql_ms = round((time.perf_counter() - t_sql_start) * 1000)
+
+    logger.info("retrieval_completed", extra={
+        "request_id": request_id,
+        "n_parents": len(parents),
+        "min_distance": min(dist_by_parent.values()) if dist_by_parent else None,
+        "max_distance": max(dist_by_parent.values()) if dist_by_parent else None,
+        "embed_ms": embed_ms,
+        "sql_ms": sql_ms,
+        "duration_ms": embed_ms + sql_ms,
+        "docs_returned": [p.doc_slug for p in parents[:3]],
+    })
+
+    return [
+        RetrievedParent(
+            parent_id=str(p['parent_id']), 
+            doc_slug=p['doc_slug'],
+            doc_title=p['doc_title'],  
+            section_path=p['section_path'], 
+            content=p['content'],
+            distance=dist_by_parent[str(p['parent_id'])], 
+            source_url=p['source_url'], 
+            authority_tier=p['authority_tier']
+        )
+        for p in ordered
+    ]
 
 def retrieve(
     db: Session,
