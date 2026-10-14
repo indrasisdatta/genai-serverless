@@ -31,6 +31,7 @@ from multipdf_chat.api.StreamingHandler import StreamingHandler
 from langchain.retrievers import ParentDocumentRetriever
 from langchain.storage import InMemoryStore
 from langchain.docstore.document import Document
+from multipdf_chat.rerank import rerank_async
 from multipdf_chat.retrieval import retrieve_async, retrieve_hybrid_async
 from multipdf_chat.logging_context import get_request_id
 import time
@@ -484,8 +485,14 @@ async def stream_user_input(request: Request, user_question, product_line=None):
 
     async with request.app.state.async_db() as db:
         # parents = await retrieve_async(db, embeddings, user_question, product_line, k=10)
-
-        parents = await retrieve_hybrid_async(db, embeddings, request.app.state.bm25, user_question, product_line, k=10)
+        parents = await retrieve_hybrid_async(
+            db, embeddings, request.app.state.bm25, 
+            user_question, product_line, k=20
+        )
+        if parents and request.app.state.reranker is not None:
+            parents = await rerank_async(
+                request.app.state.reranker, user_question, parents, top_n=5,
+            )
 
         decision = route(user_question, parents, product_line)
 

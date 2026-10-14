@@ -25,6 +25,7 @@ import time
 import uuid 
 from contextlib import asynccontextmanager
 from multipdf_chat.logging_context import set_request_id
+from multipdf_chat.rerank import load_reranker
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -36,6 +37,7 @@ async def lifespan(app: FastAPI):
             model_name="sentence-transformers/all-MiniLM-L6-v2",
             model_kwargs={"device": "cpu"}
         )
+        app.state.reranker = load_reranker()
         # Build BM25 once at startup
         with SessionLocal() as db:
             app.state.bm25 = build_bm25(db)
@@ -54,6 +56,7 @@ async def lifespan(app: FastAPI):
         app.state.async_db = None
         app.state.embeddings = None
         app.state.bm25 = None
+        app.state.reranker = None
 
 
 app = FastAPI(lifespan=lifespan)
