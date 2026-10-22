@@ -1,0 +1,1026 @@
+{
+  "git_sha": "3cf62259b5b8122164b8d08fc0636a0f46ae58e7",
+  "golden_set": "eval/golden_v1.jsonl",
+  "k": 10,
+  "total_seconds": 553.3,
+  "summary": {
+    "n_items": 28,
+    "recall@1": 0.625,
+    "recall@5": 0.917,
+    "recall@10": 0.958,
+    "mrr": 0.748,
+    "section_hit@5": null,
+    "must_include_pass_rate": 0.786,
+    "must_not_include_pass_rate": 0.893
+  },
+  "per_item": [
+    {
+      "id": "gd-001",
+      "question": "How can I dispute a charge on my wireless bill?",
+      "product_line": "mobile_postpaid",
+      "retrieved_docs": [
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ca_2025",
+        "doc_vzw_ca_2025",
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ipi_2025"
+      ],
+      "retrieved_sections": [
+        null,
+        null,
+        null,
+        "2  1-800-256-4646 verizon.com   3",
+        null
+      ],
+      "answer": "**How to dispute a charge on your Verizon wireless bill**\n\n1. **Call Verizon**  \n   \u2022\u202fYou may call Verizon Customer Service to dispute any charge that appears on your bill or on any service you were billed for.  \n   \u2022\u202fIf you are a Postpay customer, you must still pay all charges until the dispute is resolved (unless the dispute is about a lost or stolen device, or otherwise required by law).\n\n2. **Send a written notice**  \n   \u2022\u202fIf you want to preserve your right to bring an arbitration or small\u2011claims case, you must **write** to Verizon at the customer\u2011service address listed on your bill.  \n   \u2022\u202fAlternatively, you can complete the **Notice of Dispute** form available online at:  \n     **[verizon.com/about/nod/notice-of-dispute-wireless-form](https://verizon.com/about/nod/notice-of-dispute-wireless-form)**\n\n3. **What to include in your dispute**  \n   \u2022\u202fIdentify the specific charge(s) you are contesting.  \n   \u2022\u202fExplain why you believe the charge is incorrect (e.g., wrong service, duplicate charge, service not received, etc.).  \n   \u2022\u202fAttach any supporting documentation (receipts, screenshots, etc.).\n\n4. **Follow up**  \n   \u2022\u202fVerizon will review your dispute and respond. Until the dispute is resolved, you are responsible for paying the disputed amount.  \n\n**Summary**  \n- Call Verizon Customer Service to file an informal dispute.  \n- For formal dispute (and to keep arbitration rights), write to the address on your bill or submit the Notice of Dispute form online.  \n\n(If you need the exact customer\u2011service phone number or address, it is listed on your monthly bill or on the Verizon website.)",
+      "retrieval": {
+        "recall@1": 0.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 0.5
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 3096,
+        "generation": 2205
+      }
+    },
+    {
+      "id": "gd-002",
+      "question": "How do I cancel my Fios internet service?",
+      "product_line": "fios_internet",
+      "retrieved_docs": [
+        "doc_fios_ca_home",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home"
+      ],
+      "retrieved_sections": [
+        "11.1.12 Late Fees. If Verizon does not receive your payment on time, we may charge you a",
+        "11.1.9 Plans with Minimum Terms. If you subscribe to a Term Services Offer plan with a",
+        "10.2 Termination by Violation. If a ter mination is a result of violation by you of the terms of",
+        "1.4 Payment Methods. You may be required to utilize a credit or debit card to prepay",
+        "5.8 Home Awareness. If you subscribe to the Home Awareness service (\u201cHome"
+      ],
+      "answer": "**How to cancel your Fios Internet service (and what you need to know)**  \n\n| What you need to do | Where to do it | When you can do it | Fees or penalties you may face |\n|---------------------|----------------|--------------------|--------------------------------|\n| **Give Verizon written or electronic notice** | \u2022 Call **1\u2011800\u2011VERIZON** (1\u2011800\u2011837\u20114964) and speak to a customer\u2011service representative.<br>\u2022 Log in to **My\u202fVerizon** \u2192 *Account* \u2192 *Cancel services* (you\u2019ll still need to confirm by phone or email).<br>\u2022 Mail a written cancellation letter to Verizon\u2019s mailing address (see the \u201cContact Us\u201d page). | \u2022 If you\u2019re on a **Term Service Offer** (a fixed\u2011term plan): at least **30\u202fdays** but no more than **60\u202fdays** before the end of the current term.  <br>\u2022 If you\u2019re on a **month\u2011to\u2011month** plan: you can cancel at any time, but a reconnection fee may be charged. | \u2022 **Early\u2011termination fee** (if you cancel before the minimum term ends).  The fee is the amount specified in your plan\u2019s offer.  <br>\u2022 **Reconnection fee** (if you cancel a month\u2011to\u2011month plan and then decide to reactivate).  <br>\u2022 Possible **collection or legal fees** if you have unpaid balances. |\n| **Cancel any third\u2011party services** | \u2022 Contact the third\u2011party provider directly (e.g., a streaming service, security software, etc.).  <br>\u2022 Provide your Verizon account number and the name of the service. | \u2022 Must be done **at least 24\u202fhours before a free trial ends** if you\u2019re still in a trial period. | \u2022 Late\u2011payment or cancellation fees that are set by the third\u2011party provider. |\n| **Confirm your account is closed** | \u2022 Ask the Verizon rep for a written confirmation (email or letter) that your account is closed and that no further charges will be applied. | \u2022 After the notice period has passed (or immediately for month\u2011to\u2011month). | \u2022 Verify that your final bill is correct and that no additional charges appear. |\n\n---\n\n### Step\u2011by\u2011step guide\n\n1. **Decide when to cancel**  \n   * If you\u2019re on a 12\u2011month or 24\u2011month plan, plan to give notice 30\u201360\u202fdays before the term ends.  \n   * If you\u2019re on a month\u2011to\u2011month plan, you can cancel at any time but be aware of a reconnection fee.\n\n2. **Gather required information**  \n   * Your Verizon account number (found on your bill or in My\u202fVerizon).  \n   * Your billing address and phone number.  \n   * Any third\u2011party service details (service name, account number).\n\n3. **Contact Verizon**  \n   * **Phone:** 1\u2011800\u2011VERIZON (1\u2011800\u2011837\u20114964).  Tell the rep you want to cancel Fios Internet.  \n   * **Online:** Log in to My\u202fVerizon \u2192 *Account* \u2192 *Cancel services*.  Follow the prompts and confirm by phone.  \n   * **Mail:** Send a written notice to Verizon\u2019s customer\u2011service address (find it on the \u201cContact Us\u201d page).  Include your account number and a statement that you\u2019re canceling Fios Internet.\n\n4. **Cancel any third\u2011party services**  \n   * If you have bundled services (e.g., streaming, security, home\u2011automation), call or email each provider.  \n   * Mention the Verizon cancellation and provide any required account details.\n\n5. **Confirm cancellation**  \n   * Ask for a written confirmation that your account is closed and that no further charges will accrue.  \n   * Keep this confirmation for your records.\n\n6. **Check your final bill**  \n   * Verify that the final bill reflects any early\u2011termination fee and that no additional charges appear.  \n   * If you notice an error, contact Verizon within 30\u202fdays of receiving the bill.\n\n---\n\n### Things to keep in mind\n\n| Issue | What the agreement says | Practical tip |\n|-------|------------------------|---------------|\n| **Early\u2011termination fee** | \u201cYou may be assessed an early termination fee if you cancel all or any component of the Term Services Offer.\u201d | Read your plan\u2019s offer details to know the exact fee. |\n| **Trial period** | \u201cIf you decide during the trial period that the Term Services are no longer needed, you must cancel at least 24\u202fhours before the free trial ends.\u201d | Don\u2019t wait until the last minute. |\n| **Reconnection fee** | \u201cYou may be required to pay a reconnection fee or additional deposit before the Services are reactivated.\u201d | If you think you might need the service again, ask if you can keep the account open. |\n| **Unpaid balances** | \u201cIf an unpaid portion of your bill is not paid, Verizon may terminate or suspend the Services without notice.\u201d | Pay any outstanding balance before canceling to avoid extra fees. |\n| **No refunds for prepaid services** | \u201cNo refunds will be given for amounts that have been prepaid.\u201d | If you\u2019re on a prepaid plan, you cannot get money back for unused months. |\n| **Third\u2011party charges** | \u201cYou are solely responsible for any third\u2011party charges, including taxes.\u201d | Keep track of any separate invoices from third\u2011party providers. |\n\n---\n\n**Bottom line:**  \nCall Verizon or log in to My\u202fVerizon, give at least 30\u202fdays\u2019 notice (if you\u2019re on a fixed\u2011term plan), cancel any bundled third\u2011party services, and confirm you\u2019ve received a written cancellation notice. Be prepared for an early\u2011termination fee if you\u2019re still within the minimum term, and double\u2011check your final bill to ensure no extra charges. If you have any questions or run into trouble, the Verizon \u201cContact Us\u201d page (https://www.verizon.com/support/contact-us/) provides phone numbers, chat, and email options.",
+      "retrieval": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 1.0
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 66,
+        "generation": 3204
+      }
+    },
+    {
+      "id": "gd-003",
+      "question": "What is the late fee on my wireless bill?",
+      "product_line": "mobile_postpaid",
+      "retrieved_docs": [
+        "doc_vzw_ca_2025",
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ipi_2025",
+        "doc_vzw_dpa_2026"
+      ],
+      "retrieved_sections": [
+        null,
+        null,
+        "10  1- 800-256-4646 verizon.com   11Verizon Wireless Plans, Rate and Coverage Areas,",
+        "5 percent per month on the unpaid balance, or a flat",
+        "1. DEVICE PAYMENT AGREEMENT. THIS DEVICE PAYMENT AGREEMENT REQUIRES THAT YOU MAINTAIN"
+      ],
+      "answer": "**Late\u2011fee policy for Verizon Wireless post\u2011pay customers**\n\n- **Amount:**  \n  - Up to **5\u202f% per month** on the unpaid balance, **or**  \n  - A flat **$7 per month**, **whichever is greater**.  \n\n- **When it applies:**  \n  - The fee is assessed if a payment is not received on time.  \n  - The charge is subject to state law; if a state law limits the fee, the lower amount will apply.\n\n- **Additional notes:**  \n  - The fee is part of the rates and charges you agree to pay.  \n  - If you fail to pay on time and the account is sent to a third\u2011party collection agency, a separate collection fee (up to 18\u202f% of the unpaid balance, not to exceed the maximum allowed by law) may also be assessed.  \n\n*(This information comes from Verizon\u2019s Customer Agreement for mobile post\u2011pay service.)*",
+      "retrieval": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 1.0
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": 1.0,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": 0.0
+      },
+      "timing_ms": {
+        "retrieval": 707,
+        "generation": 16090
+      }
+    },
+    {
+      "id": "gd-004",
+      "question": "What is the late fee on my Fios bill?",
+      "product_line": "fios_internet",
+      "retrieved_docs": [
+        "doc_fios_ca_home",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home",
+        "doc_vzw_dpa_2026",
+        "doc_fios_ca_home"
+      ],
+      "retrieved_sections": [
+        "11.2 Customer Deposits. We may require that you provide us with a refundable deposit",
+        "11.1.12 Late Fees. If Verizon does not receive your payment on time, we may charge you a",
+        "11.4 Payments. Exce pt as otherwise permitted under applicable law, you agree that you",
+        "1. DEVICE PAYMENT AGREEMENT. THIS DEVICE PAYMENT AGREEMENT REQUIRES THAT YOU MAINTAIN",
+        "11.1.5 You agree to pay all applicable Charges for Services and Equipment by the due date"
+      ],
+      "answer": "The agreement states that if you don\u2019t pay on time, Verizon may charge a late fee of **up to 1.5\u202f% per month (18\u202f% per year) on the unpaid balance, or a flat $9 per month\u2014whichever is greater\u2014provided that this is allowed by the law in the state where your billing address is located**.",
+      "retrieval": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 1.0
+      },
+      "generation": {
+        "must_include_pass": false,
+        "must_include_hit_rate": 0.5,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": 0.0
+      },
+      "timing_ms": {
+        "retrieval": 2,
+        "generation": 21804
+      }
+    },
+    {
+      "id": "gd-005",
+      "question": "What is the late fee on my device payment installment?",
+      "product_line": "mobile_device_financing",
+      "retrieved_docs": [
+        "doc_vzw_dpa_2026",
+        "doc_vzw_dpa_2026",
+        "doc_vzw_dpa_2026",
+        "doc_vzw_dpa_2026",
+        "doc_vzw_dpa_2026"
+      ],
+      "retrieved_sections": [
+        null,
+        "1. DEVICE PAYMENT AGREEMENT. THIS DEVICE PAYMENT AGREEMENT REQUIRES THAT YOU MAINTAIN",
+        "3. PREPAYMENT: You may pay the total amount due under this Device Payment Agreement at any time before the final scheduled payment is due, and You will not have to pay a penalty. If You pay more than the monthly payment",
+        "4. SECURITY INTEREST. You are granting to Us a purchase money security interest (\u201dPMSI\u201d) in the Device and any or all cash or non- cash proceeds of the Device (including, as applicable, any substitutions or replacements), to secure",
+        "1. Do not sign this Device Payment  Agreement  before  You read  it or if it contains  any blank spaces for"
+      ],
+      "answer": "The late payment fee is **up to 5\u202f% of the unpaid balance or $5, whichever is less** (applied if a payment is received 15\u202fdays or more after its due date).",
+      "retrieval": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 1.0
+      },
+      "generation": {
+        "must_include_pass": false,
+        "must_include_hit_rate": 0.5,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": 0.0
+      },
+      "timing_ms": {
+        "retrieval": 388,
+        "generation": 20606
+      }
+    },
+    {
+      "id": "gd-006",
+      "question": "What's my late fee?",
+      "product_line": null,
+      "retrieved_docs": [
+        "doc_vzw_dpa_2026",
+        "doc_vzw_dpa_2026",
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ca_2025",
+        "doc_fios_ca_home"
+      ],
+      "retrieved_sections": [
+        null,
+        "1. DEVICE PAYMENT AGREEMENT. THIS DEVICE PAYMENT AGREEMENT REQUIRES THAT YOU MAINTAIN",
+        "5 percent per month on the unpaid balance, or a flat",
+        null,
+        "11.1.12 Late Fees. If Verizon does not receive your payment on time, we may charge you a"
+      ],
+      "answer": "**Late\u2011payment fee on your device payment agreement**\n\nIf you fail to pay a scheduled installment within 15 days of its due date, Verizon may charge you a late\u2011payment fee of **up to 5\u202f% of the unpaid balance or $5, whichever is less**.  \n\n(If the check you wrote is returned, an additional fee of up to $25 may also apply.)",
+      "retrieval": {
+        "recall@1": null,
+        "mrr": null,
+        "recall@5": null,
+        "recall@10": null
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": false,
+        "must_not_include_hit_rate": 0.3333333333333333
+      },
+      "timing_ms": {
+        "retrieval": 10,
+        "generation": 28663
+      }
+    },
+    {
+      "id": "gd-007",
+      "question": "I got charged a late fee - what's the rate?",
+      "product_line": "mobile_postpaid",
+      "retrieved_docs": [
+        "doc_vzw_dpa_2026",
+        "doc_vzw_dpa_2026",
+        "doc_vzw_ca_2025",
+        "doc_vzw_ipi_2025",
+        "doc_fios_ca_home"
+      ],
+      "retrieved_sections": [
+        null,
+        "1. DEVICE PAYMENT AGREEMENT. THIS DEVICE PAYMENT AGREEMENT REQUIRES THAT YOU MAINTAIN",
+        null,
+        "5 percent per month on the unpaid balance, or a flat",
+        "11.1.12 Late Fees. If Verizon does not receive your payment on time, we may charge you a"
+      ],
+      "answer": "**Late\u2011fee rate \u2013 what the contract says**\n\n| Agreement | Late\u2011fee calculation | Maximum/minimum cap |\n|-----------|----------------------|---------------------|\n| **Retail Installment (Device Payment Agreement)** | Up to **5\u202f% of the unpaid balance** | **$5** (the fee is the lower of the 5\u202f% amount or $5) |\n| **Verizon Post\u2011Pay (and also applies to Pre\u2011Pay in most states)** | Up to **5\u202f% per month on the unpaid balance** | **$7 per month** (the fee is the higher of the 5\u202f% amount or $7) |\n\n**How it works in practice**\n\n1. **If you\u2019re under the Retail Installment (device\u2011finance) contract**  \n   * The fee you see will be the smaller of:  \n     * 5\u202f% of whatever balance was still owed on the day the payment was 15\u202fdays late, **or**  \n     * a flat $5.  \n   * Example: If your unpaid balance was $80, 5\u202f% would be $4 \u2013 the fee would be $4 (because it\u2019s less than $5).  \n   * If your unpaid balance was $200, 5\u202f% would be $10 \u2013 the fee would be capped at $5.\n\n2. **If you\u2019re a Verizon Post\u2011Pay (or Pre\u2011Pay) customer**  \n   * The fee you see will be the greater of:  \n     * 5\u202f% of the unpaid balance, **or**  \n     * a flat $7.  \n   * Example: If your unpaid balance was $80, 5\u202f% would be $4 \u2013 the fee would be $7 (because it\u2019s the higher amount).  \n   * If your unpaid balance was $200, 5\u202f% would be $10 \u2013 the fee would be $10 (because it\u2019s higher than $7).\n\n**Bottom line**\n\n- **Device\u2011finance late fee:** *5\u202f% of the balance, capped at $5.*  \n- **Verizon Post\u2011Pay/Pre\u2011Pay late fee:** *5\u202f% of the balance, but at least $7 per month (whichever is greater).*\n\nIf the fee you were charged doesn\u2019t match the above (e.g., a different amount or a different percentage), double\u2011check which agreement you\u2019re under and whether state law limits or modifies the fee. If you\u2019re still unsure, you can ask Verizon for a detailed breakdown of the fee calculation.",
+      "retrieval": {
+        "recall@1": 0.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 0.3333333333333333
+      },
+      "generation": {
+        "must_include_pass": false,
+        "must_include_hit_rate": 0.5,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": 0.0
+      },
+      "timing_ms": {
+        "retrieval": 383,
+        "generation": 14150
+      }
+    },
+    {
+      "id": "gd-008",
+      "question": "How much am I charged if I pay my Fios bill late?",
+      "product_line": "fios_internet",
+      "retrieved_docs": [
+        "doc_fios_ca_home",
+        "doc_fios_ca_home",
+        "doc_vzw_dpa_2026",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home"
+      ],
+      "retrieved_sections": [
+        "11.2 Customer Deposits. We may require that you provide us with a refundable deposit",
+        "11.1.12 Late Fees. If Verizon does not receive your payment on time, we may charge you a",
+        "1. DEVICE PAYMENT AGREEMENT. THIS DEVICE PAYMENT AGREEMENT REQUIRES THAT YOU MAINTAIN",
+        "1.4 Payment Methods. You may be required to utilize a credit or debit card to prepay",
+        "11.4 Payments. Exce pt as otherwise permitted under applicable law, you agree that you"
+      ],
+      "answer": "**Late\u2011payment charge for a Fios bill**\n\nIf you do not pay your Fios bill by the due date, Verizon may add a late\u2011fee to your account.  The fee is calculated as:\n\n| Calculation | Amount |\n|-------------|--------|\n| **Monthly interest** | Up to **1.5\u202f% per month** (equivalent to 18\u202f% per year) on the unpaid balance |\n| **Flat fee** | **$9.00 per month** |\n\nVerizon will charge **the higher of the two amounts** (the 1.5\u202f% monthly interest or the flat $9 fee), **provided that such a fee is allowed by the laws of the state where your billing address is located**.  \n\nIf a state law limits or prohibits the fee, Verizon may not be able to apply it.",
+      "retrieval": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 1.0
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": 1.0,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": 0.0
+      },
+      "timing_ms": {
+        "retrieval": 380,
+        "generation": 22870
+      }
+    },
+    {
+      "id": "gd-009",
+      "question": "What is the fee if my payment is returned?",
+      "product_line": "mobile_postpaid",
+      "retrieved_docs": [
+        "doc_vzw_dpa_2026",
+        "doc_vzw_dpa_2026",
+        "doc_vzw_dpa_2026",
+        "doc_vzw_ipi_2025",
+        "doc_fios_ca_home"
+      ],
+      "retrieved_sections": [
+        "1. DEVICE PAYMENT AGREEMENT. THIS DEVICE PAYMENT AGREEMENT REQUIRES THAT YOU MAINTAIN",
+        "3. PREPAYMENT: You may pay the total amount due under this Device Payment Agreement at any time before the final scheduled payment is due, and You will not have to pay a penalty. If You pay more than the monthly payment",
+        null,
+        null,
+        "11.1.12 Late Fees. If Verizon does not receive your payment on time, we may charge you a"
+      ],
+      "answer": "**Returned\u2011payment fee:**  \nIf a payment (e.g., a check) is returned, the fee is **up to $25** (unless state law prohibits such a fee).",
+      "retrieval": {
+        "recall@1": 0.0,
+        "recall@5": 0.0,
+        "recall@10": 1.0,
+        "mrr": 0.125
+      },
+      "generation": {
+        "must_include_pass": false,
+        "must_include_hit_rate": 0.0,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 15,
+        "generation": 15344
+      }
+    },
+    {
+      "id": "gd-010",
+      "question": "Do I have to agree to arbitration when I sign up for wireless service?",
+      "product_line": "mobile_postpaid",
+      "retrieved_docs": [
+        "doc_vzw_ca_2025",
+        "doc_vzw_ca_2025",
+        "doc_vzw_ca_2025",
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ca_2025"
+      ],
+      "retrieved_sections": [
+        null,
+        null,
+        null,
+        "6  1-800-256-4646 verizon.com   7",
+        null
+      ],
+      "answer": "**Answer**\n\nYes.\u202fBy signing up for Verizon Wireless service you accept the company\u2019s Customer Agreement, which contains a mandatory arbitration clause.\u202fThat clause requires you to resolve disputes through arbitration (unless you explicitly opt out by giving Verizon written notice).\u202fIf you do not opt out, any claim you have against Verizon (or vice\u2011versa) must be brought to arbitration rather than in court, and the arbitration award is limited to the specific case.\u202fThe agreement also states that the arbitration provision continues to apply even after you stop receiving service.",
+      "retrieval": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 1.0
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 116,
+        "generation": 31523
+      }
+    },
+    {
+      "id": "gd-011",
+      "question": "Can I opt out of arbitration for my Fios service?",
+      "product_line": "fios_internet",
+      "retrieved_docs": [
+        "doc_fios_ca_home",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home"
+      ],
+      "retrieved_sections": [
+        "16.7 AN ARBITRATION AWARD AND ANY JUDGMENT CONFIRMING IT APPLY ONLY",
+        "16.1 THE FEDERAL ARBITRATION ACT APPLIES TO THIS AGREEMENT. EXCEPT FOR",
+        "16.3 THIS AGREEMENT DOESN\u2019T ALLOW CLASS OR COLLECTIVE ARBITRATIONS",
+        "16.3 THIS AGREEMENT DOESN\u2019T ALLOW CLASS OR COLLECTIVE ARBITRATIONS",
+        "16. ARBITRATION OR SMALL CLAIMS ACTIONS."
+      ],
+      "answer": "**Answer**\n\nYes \u2013 you can opt out of the arbitration clause for your Fios service, but you must do so in writing and follow the procedures set out in Verizon\u2019s Customer Agreement.\n\n**What the agreement says**\n\n* **Opt\u2011out option** \u2013 Paragraph\u202f16.6 (not fully quoted here) specifically allows a customer to \u201copt out of arbitration.\u201d  \n* **Written notice** \u2013 Paragraph\u202f16.4 requires that if either party intends to seek arbitration, they must give the other party written notice at least 60\u202fdays before initiating arbitration.  \n* **Small\u2011claims alternative** \u2013 Paragraph\u202f16.2 gives you the right, before an arbitrator is appointed, to choose to have the dispute heard in small\u2011claims court instead of arbitration. You must notify Verizon in writing of that choice.  \n\n**How to opt out**\n\n1. **Send a written notice** to Verizon\u2019s Dispute Resolution Manager (or use the online form) at least 60\u202fdays before you would otherwise start arbitration.  \n2. In that notice, identify your account, describe the claim, and state that you are opting out of arbitration and, if desired, that you wish to bring the matter in small\u2011claims court.  \n\nOnce you give that notice, the arbitration provision does not apply to that dispute, and you can pursue the claim in court (or small\u2011claims court) instead.",
+      "retrieval": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 1.0
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 365,
+        "generation": 18999
+      }
+    },
+    {
+      "id": "gd-012",
+      "question": "How long do I have to return my Fios equipment after cancelling?",
+      "product_line": "fios_internet",
+      "retrieved_docs": [
+        "doc_fios_ca_home",
+        "doc_fios_return_2022",
+        "doc_fios_return_2022",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home"
+      ],
+      "retrieved_sections": [
+        "9.4 Equipment Pricing. Equipment may be priced separately from the price of the",
+        "1. RETURN POLICY",
+        "1.2 Equipment that is not connected to the Fios network so that remote diagnostics can be",
+        "9.6.4 Failure to Follow Return Policy. Failing to return Equipment owned by us within thirty",
+        "11.1.9 Plans with Minimum Terms. If you subscribe to a Term Services Offer plan with a"
+      ],
+      "answer": "**Answer**\n\nYou must return any Verizon\u2011owned Fios equipment within **30 days** of canceling your service (or of receiving instructions from Verizon). Failure to do so may result in unreturned\u2011equipment charges.",
+      "retrieval": {
+        "recall@1": 0.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 0.5
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 349,
+        "generation": 15826
+      }
+    },
+    {
+      "id": "gd-013",
+      "question": "What Fios equipment am I not required to return?",
+      "product_line": "fios_internet",
+      "retrieved_docs": [
+        "doc_fios_return_2022",
+        "doc_fios_ca_home",
+        "doc_fios_return_2022",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home"
+      ],
+      "retrieved_sections": [
+        "1.2 Equipment that is not connected to the Fios network so that remote diagnostics can be",
+        "9.6.4 Failure to Follow Return Policy. Failing to return Equipment owned by us within thirty",
+        "1. RETURN POLICY",
+        "9.6.3 Return of Defective Equipment . Within one year of Equipment purchase or",
+        "9.4 Equipment Pricing. Equipment may be priced separately from the price of the"
+      ],
+      "answer": "**Answer:**\n\nAccording to Verizon\u2019s Fios Equipment Return Policy, you are **not required to return any equipment that has been officially designated as \u201cRetired\u201d by Verizon**\u2014with the **exception of set\u2011top boxes and Optical Network Terminals (ONTs)**. Those two types of devices must still be returned even if they have been retired. All other retired equipment reverts to your ownership, and you are not obligated to return it.",
+      "retrieval": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 1.0
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 14,
+        "generation": 29686
+      }
+    },
+    {
+      "id": "gd-014",
+      "question": "What is the early termination fee for my wireless plan?",
+      "product_line": "mobile_postpaid",
+      "retrieved_docs": [
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ca_2025",
+        "doc_fios_ca_home",
+        "doc_vzw_ca_2025"
+      ],
+      "retrieved_sections": [
+        "10  1- 800-256-4646 verizon.com   11Verizon Wireless Plans, Rate and Coverage Areas,",
+        null,
+        null,
+        "10.2 Termination by Violation. If a ter mination is a result of violation by you of the terms of",
+        null
+      ],
+      "answer": "**Early termination fee (ETF) for your Verizon wireless plan**\n\n| Trigger | ETF amount |\n|---------|------------|\n| **Standard plan** (no advanced device purchased) | **Up to\u202f$175** |\n| **Plan tied to an advanced device** (e.g., a smartphone or netbook purchased from Verizon or an authorized vendor) | **Up to\u202f$350** |\n\n- The ETF applies if you cancel the line before the end of your contract term (or before the device\u2011purchase\u2011related term expires).  \n- The fee is the amount listed in the \u201cEarly Termination Fee\u201d section of your Customer Agreement and may be charged in addition to any other applicable charges (e.g., prorated usage fees, taxes, or surcharges).  \n\nIf you have a specific device or contract details that differ, you should check the exact fee listed on your receipt or order confirmation, or contact Verizon customer service for confirmation.",
+      "retrieval": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 1.0
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 360,
+        "generation": 24615
+      }
+    },
+    {
+      "id": "gd-015",
+      "question": "What activation fee will I pay when starting new wireless service?",
+      "product_line": "mobile_postpaid",
+      "retrieved_docs": [
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ca_2025",
+        "doc_fios_ca_home",
+        "doc_vzw_ipi_2025"
+      ],
+      "retrieved_sections": [
+        null,
+        "10  1- 800-256-4646 verizon.com   11Verizon Wireless Plans, Rate and Coverage Areas,",
+        null,
+        "3.2 Backup Details. With a fully -char ged battery (or batteries), the battery back -up",
+        "5 percent per month on the unpaid balance, or a flat"
+      ],
+      "answer": "**Answer**\n\nWhen you start a new wireless service, Verizon may charge an **activation/upgrade fee of up to $35 per line**. This is the maximum amount that can be applied at the time of activation for each line on your account.",
+      "retrieval": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 1.0
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 367,
+        "generation": 19397
+      }
+    },
+    {
+      "id": "gd-016",
+      "question": "What is the Federal Universal Service Fund fee?",
+      "product_line": "mobile_postpaid",
+      "retrieved_docs": [
+        "doc_vzw_ipi_2025",
+        "doc_vzw_dpa_2026",
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ipi_2025",
+        "doc_fios_ca_home"
+      ],
+      "retrieved_sections": [
+        null,
+        "7. ASSIGNMENT. We may, without Your consent, and without giving You notice, assign or transfer this Device Payment Agreement or any payment or any other sums due or to become due hereunder. In such event our assignee will have, to the extent transferred or assigned to it, all Our rights, powers, privileges and remedies",
+        "2  1-800-256-4646 verizon.com   3",
+        "5 percent per month on the unpaid balance, or a flat",
+        "11.4 Payments. Exce pt as otherwise permitted under applicable law, you agree that you"
+      ],
+      "answer": "The Federal Universal Service Fund fee is **36.0\u202f% of the interstate and international telecom charges** (the exact percentage can vary quarterly based on the FCC rate).",
+      "retrieval": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 1.0
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 18,
+        "generation": 18622
+      }
+    },
+    {
+      "id": "gd-017",
+      "question": "What is the Regulatory Recovery Charge on my wireless bill?",
+      "product_line": "mobile_postpaid",
+      "retrieved_docs": [
+        "doc_vzw_ca_2025",
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ipi_2025"
+      ],
+      "retrieved_sections": [
+        null,
+        "2  1-800-256-4646 verizon.com   3",
+        "2  1-800-256-4646 verizon.com   3",
+        null,
+        "10  1- 800-256-4646 verizon.com   11Verizon Wireless Plans, Rate and Coverage Areas,"
+      ],
+      "answer": "Content not available.",
+      "retrieval": {
+        "recall@1": 0.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 0.5
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 376,
+        "generation": 18985
+      }
+    },
+    {
+      "id": "gd-018",
+      "question": "What is the Administrative and Telco Recovery Charge?",
+      "product_line": "mobile_postpaid",
+      "retrieved_docs": [
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ca_2025",
+        "doc_vzw_ipi_2025",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home"
+      ],
+      "retrieved_sections": [
+        "2  1-800-256-4646 verizon.com   3",
+        null,
+        "2  1-800-256-4646 verizon.com   3",
+        "9.6.4 Failure to Follow Return Policy. Failing to return Equipment owned by us within thirty",
+        "11.4 Payments. Exce pt as otherwise permitted under applicable law, you agree that you"
+      ],
+      "answer": "**Answer:**\n\nThe **Administrative and Telco Recovery Charge** is a fee that Verizon adds to your bill for its own administrative and telecommunications\u2011related costs. It is *not* a tax, nor is it required by law or tied to any government\u2011imposed charge. Verizon retains the entire amount (or part of it) to cover internal expenses. The amount of this charge and what it specifically pays for can change over time. It is listed separately from taxes and other government\u2011mandated fees on your invoice.",
+      "retrieval": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 1.0
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 361,
+        "generation": 16660
+      }
+    },
+    {
+      "id": "gd-019",
+      "question": "If I move states, does my Device Payment Agreement change?",
+      "product_line": "mobile_device_financing",
+      "retrieved_docs": [
+        "doc_vzw_dpa_2026",
+        "doc_vzw_dpa_2026",
+        "doc_vzw_dpa_2026",
+        "doc_vzw_dpa_2026",
+        "doc_vzw_ca_2025"
+      ],
+      "retrieved_sections": [
+        "7. ASSIGNMENT. We may, without Your consent, and without giving You notice, assign or transfer this Device Payment Agreement or any payment or any other sums due or to become due hereunder. In such event our assignee will have, to the extent transferred or assigned to it, all Our rights, powers, privileges and remedies",
+        "1. Do not sign this Device Payment  Agreement  before  You read  it or if it contains  any blank spaces for",
+        "3. PREPAYMENT: You may pay the total amount due under this Device Payment Agreement at any time before the final scheduled payment is due, and You will not have to pay a penalty. If You pay more than the monthly payment",
+        "1. DEVICE PAYMENT AGREEMENT. THIS DEVICE PAYMENT AGREEMENT REQUIRES THAT YOU MAINTAIN",
+        null
+      ],
+      "answer": "**Answer**\n\nNo. The Device Payment Agreement itself does not change if you move to another state.  \nThe agreement is governed by the laws of the state that was listed as your billing address *at the time you signed the agreement*. That governing\u2011law provision is fixed when the contract is executed, and moving to a new state does not automatically alter the terms or the jurisdiction that applies to the agreement.  \n\nSo while your billing address may change, the contract\u2019s terms\u2014including payment schedule, default remedies, and Verizon\u2019s rights\u2014remain the same. If you have any concerns about how state law might affect you after a move, you should review the governing\u2011law clause in the agreement and consider contacting Verizon for clarification.",
+      "retrieval": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 1.0
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 360,
+        "generation": 22963
+      }
+    },
+    {
+      "id": "gd-020",
+      "question": "What are the Illinois-specific terms on my device payment agreement?",
+      "product_line": "mobile_device_financing",
+      "retrieved_docs": [
+        "doc_vzw_dpa_2026",
+        "doc_vzw_dpa_2026",
+        "doc_vzw_dpa_2026",
+        "doc_vzw_dpa_2026",
+        "doc_vzw_dpa_2026"
+      ],
+      "retrieved_sections": [
+        "1. DEVICE PAYMENT AGREEMENT. THIS DEVICE PAYMENT AGREEMENT REQUIRES THAT YOU MAINTAIN",
+        "10. This is a Retail  Installment  Sale Agreement/Security Agreement  and not a lease.  We have a limited",
+        "4. SECURITY INTEREST. You are granting to Us a purchase money security interest (\u201dPMSI\u201d) in the Device and any or all cash or non- cash proceeds of the Device (including, as applicable, any substitutions or replacements), to secure",
+        "1. Do not sign this Device Payment  Agreement  before  You read  it or if it contains  any blank spaces for",
+        "7. ASSIGNMENT. We may, without Your consent, and without giving You notice, assign or transfer this Device Payment Agreement or any payment or any other sums due or to become due hereunder. In such event our assignee will have, to the extent transferred or assigned to it, all Our rights, powers, privileges and remedies"
+      ],
+      "answer": "**Illinois\u2011specific terms on your Device Payment Agreement**\n\n1. **Illinois Predatory Loan Prevention Act (PLPA) compliance**  \n   - The agreement must comply with the Illinois PLPA.  \n   - The PLPA prohibits any installment\u2011sales agreement from imposing a **PLPA Annual Percentage Rate (APR) that exceeds 36\u202f%** on the unpaid balance of the amount financed.  \n\n2. **Consequences of exceeding the 36\u202f% APR limit**  \n   - If the agreement\u2019s PLPA APR is **over 36\u202f%**, the agreement is **null and void** and the lender may not collect on it.  \n\n3. **Disclosed APR**  \n   - The APR that is disclosed to you may be **lower than the PLPA APR** (i.e., the rate the lender actually charges can be lower than the maximum allowed by the PLPA).  \n\nThese are the only terms in the agreement that are specific to Illinois.",
+      "retrieval": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 1.0
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": 1.0,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 22,
+        "generation": 22126
+      }
+    },
+    {
+      "id": "gd-021",
+      "question": "How many days do I have to dispute a Fios charge?",
+      "product_line": "fios_internet",
+      "retrieved_docs": [
+        "doc_fios_ca_home",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home"
+      ],
+      "retrieved_sections": [
+        "11.2 Customer Deposits. We may require that you provide us with a refundable deposit",
+        "16.7 AN ARBITRATION AWARD AND ANY JUDGMENT CONFIRMING IT APPLY ONLY",
+        null,
+        "17.4 Waiver. Verizon\u2019s failure at any time to insist upon strict compliance with any of the",
+        "16.3 THIS AGREEMENT DOESN\u2019T ALLOW CLASS OR COLLECTIVE ARBITRATIONS"
+      ],
+      "answer": "**You have 60 days to dispute a Fios charge.**  \n\nAccording to the Verizon Customer Agreement (Fios Internet/TV/Home Phone) under section 11.3 \u2013 *Questions about Your Billing Statement* \u2013 it states:\n\n> \u201cSubject to applicable law, if you intend to dispute a charge on your billing statement, you must contact us within sixty (60) days of your billing date if you receive the bill in question.\u201d\n\nTherefore, you must notify Verizon of any dispute within 60 days from the date the bill was issued.",
+      "retrieval": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 1.0
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 13,
+        "generation": 22474
+      }
+    },
+    {
+      "id": "gd-022",
+      "question": "Is the Fios equipment return policy the same for wireless devices?",
+      "product_line": "mobile_postpaid",
+      "retrieved_docs": [
+        "doc_fios_return_2022",
+        "doc_fios_return_2022",
+        "doc_fios_return_2022",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home"
+      ],
+      "retrieved_sections": [
+        "1. RETURN POLICY",
+        "1.12 If you use t he Equipment to r un any software not pr ovided by V er iz on or i ts immediate",
+        "1.2 Equipment that is not connected to the Fios network so that remote diagnostics can be",
+        "9.4 Equipment Pricing. Equipment may be priced separately from the price of the",
+        "9.6.3 Return of Defective Equipment . Within one year of Equipment purchase or"
+      ],
+      "answer": "Content not available.",
+      "retrieval": {
+        "recall@1": 0.0,
+        "recall@5": 0.0,
+        "recall@10": 0.0,
+        "mrr": 0.0
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": false,
+        "must_not_include_hit_rate": 0.3333333333333333
+      },
+      "timing_ms": {
+        "retrieval": 367,
+        "generation": 19602
+      }
+    },
+    {
+      "id": "gd-023",
+      "question": "What is my monthly late fee?",
+      "product_line": "mobile_device_financing",
+      "retrieved_docs": [
+        "doc_vzw_ca_2025",
+        "doc_vzw_ipi_2025",
+        "doc_vzw_dpa_2026",
+        "doc_vzw_dpa_2026",
+        "doc_fios_ca_home"
+      ],
+      "retrieved_sections": [
+        null,
+        "5 percent per month on the unpaid balance, or a flat",
+        null,
+        "1. DEVICE PAYMENT AGREEMENT. THIS DEVICE PAYMENT AGREEMENT REQUIRES THAT YOU MAINTAIN",
+        "11.1.12 Late Fees. If Verizon does not receive your payment on time, we may charge you a"
+      ],
+      "answer": "**Monthly late fee (mobile post\u2011pay)**  \nIf you\u2019re a Postpay customer and we don\u2019t receive your payment on time, the late fee is **the greater of**:\n\n* **5\u202f% per month** on the unpaid balance, or  \n* **$7 per month**.\n\nThis applies only if state law allows it in your billing address. If the 5\u202f% amount is less than $7, the fee will be $7; if the 5\u202f% amount is higher, that higher amount applies.",
+      "retrieval": {
+        "recall@1": 0.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 0.3333333333333333
+      },
+      "generation": {
+        "must_include_pass": false,
+        "must_include_hit_rate": 0.0,
+        "must_not_include_pass": false,
+        "must_not_include_hit_rate": 0.5
+      },
+      "timing_ms": {
+        "retrieval": 24,
+        "generation": 10867
+      }
+    },
+    {
+      "id": "gd-024",
+      "question": "What is the interest rate on late Fios payments?",
+      "product_line": "fios_internet",
+      "retrieved_docs": [
+        "doc_vzw_dpa_2026",
+        "doc_vzw_dpa_2026",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home"
+      ],
+      "retrieved_sections": [
+        null,
+        "9. ELECTRONIC ACCESS TO DEVICE  PAYMENT  AGREEMENT/OTHER  COMMUNICATIONS.  By signing  below,",
+        "11.1.12 Late Fees. If Verizon does not receive your payment on time, we may charge you a",
+        "11.2 Customer Deposits. We may require that you provide us with a refundable deposit",
+        "4.1.3 Pluto TV. Pluto TV is provided directly by Pluto Inc., and is subject to the separate"
+      ],
+      "answer": "**Interest rate on late Fios payments**\n\nAccording to the Verizon Customer Agreement for Fios Internet / TV / Home Phone (see section **11.1.12 Late Fees**), if a Fios payment is not received on time, Verizon may charge a late fee of **up to 1.5\u202f% per month**\u2014which translates to **18\u202f% per year**\u2014on the unpaid balance. This rate applies unless a flat $9 per month fee (whichever is greater) is permitted by state law.",
+      "retrieval": {
+        "recall@1": 0.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 0.3333333333333333
+      },
+      "generation": {
+        "must_include_pass": false,
+        "must_include_hit_rate": 0.0,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 15,
+        "generation": 29862
+      }
+    },
+    {
+      "id": "gd-025",
+      "question": "How much does Verizon 5G Home Internet cost per month?",
+      "product_line": "fios_internet",
+      "retrieved_docs": [
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ipi_2025",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home",
+        "doc_fios_ca_home"
+      ],
+      "retrieved_sections": [
+        null,
+        "8  1-800-256-4646 verizon.com   9",
+        "11.1.9 Plans with Minimum Terms. If you subscribe to a Term Services Offer plan with a",
+        "11.1.5 You agree to pay all applicable Charges for Services and Equipment by the due date",
+        "3.2 Backup Details. With a fully -char ged battery (or batteries), the battery back -up"
+      ],
+      "answer": "Content not available.",
+      "retrieval": {
+        "recall@1": null,
+        "mrr": null,
+        "recall@5": null,
+        "recall@10": null
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 365,
+        "generation": 16416
+      }
+    },
+    {
+      "id": "gd-026",
+      "question": "How do I file a complaint with the FCC about my service?",
+      "product_line": null,
+      "retrieved_docs": [
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ipi_2025",
+        "doc_fios_ca_home",
+        "doc_vzw_ca_2025",
+        "doc_fios_ca_home"
+      ],
+      "retrieved_sections": [
+        "4  1-800-256-4646 verizon.com   5",
+        null,
+        "16.1 THE FEDERAL ARBITRATION ACT APPLIES TO THIS AGREEMENT. EXCEPT FOR",
+        null,
+        "14.2 Notice of a Billing Dispute. You must notify us within thirty (30) days of receipt of"
+      ],
+      "answer": "Content not available.",
+      "retrieval": {
+        "recall@1": null,
+        "mrr": null,
+        "recall@5": null,
+        "recall@10": null
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 339,
+        "generation": 23595
+      }
+    },
+    {
+      "id": "gd-027",
+      "question": "What is AT&T's cancellation fee?",
+      "product_line": null,
+      "retrieved_docs": [
+        "doc_vzw_ca_2025",
+        "doc_vzw_ca_2025",
+        "doc_vzw_ca_2025",
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ipi_2025"
+      ],
+      "retrieved_sections": [
+        "30 days, your outstanding balance may immediately become due. Canceling service may also",
+        null,
+        null,
+        null,
+        null
+      ],
+      "answer": "Content not available.",
+      "retrieval": {
+        "recall@1": null,
+        "mrr": null,
+        "recall@5": null,
+        "recall@10": null
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": 0.0
+      },
+      "timing_ms": {
+        "retrieval": 362,
+        "generation": 18522
+      }
+    },
+    {
+      "id": "gd-028",
+      "question": "When can I upgrade my phone?",
+      "product_line": "mobile_device_financing",
+      "retrieved_docs": [
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ipi_2025",
+        "doc_vzw_dpa_2026",
+        "doc_vzw_ipi_2025",
+        "doc_vzw_ca_2025"
+      ],
+      "retrieved_sections": [
+        "10  1- 800-256-4646 verizon.com   11Verizon Wireless Plans, Rate and Coverage Areas,",
+        "10 Franklin Square",
+        "3. PREPAYMENT: You may pay the total amount due under this Device Payment Agreement at any time before the final scheduled payment is due, and You will not have to pay a penalty. If You pay more than the monthly payment",
+        "5 percent per month on the unpaid balance, or a flat",
+        null
+      ],
+      "answer": "**Answer**\n\nYou can upgrade your phone when it qualifies for Verizon\u2019s *early\u2011upgrade offer*.  If your device meets the criteria for that offer, you can initiate the upgrade by visiting\u202fverizonwireless.com/upgradeterms\u202fto review the specific terms and conditions.\n\nIf you are on a device\u2011payment agreement or a contract that is still in force, you can only upgrade after the contract term ends (or after you pay any applicable early\u2011termination fee).  In other words, outside of an early\u2011upgrade offer, an upgrade before the end of your contract would trigger the standard early\u2011termination fee described in the agreement.\n\n*(If you need more detail on a specific plan or device, you can refer to the customer\u2011service contact numbers or the online help center listed in the agreement.)*",
+      "retrieval": {
+        "recall@1": 0.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 0.3333333333333333
+      },
+      "generation": {
+        "must_include_pass": true,
+        "must_include_hit_rate": null,
+        "must_not_include_pass": true,
+        "must_not_include_hit_rate": null
+      },
+      "timing_ms": {
+        "retrieval": 8,
+        "generation": 18321
+      }
+    }
+  ]
+}

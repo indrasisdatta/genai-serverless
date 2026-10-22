@@ -5,27 +5,68 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from requests import Session
 # from fastapi.exceptions import RequestValidationError
 from multipdf_chat.api.upload import upload_handler
+from multipdf_chat.api.create_file_embeddings_handler import create_file_embeddings_handler
 from multipdf_chat.api.query import query_answer
 from typing import List
 
-from multipdf_chat.db import SessionLocal, get_db
+from multipdf_chat.bm25 import build_bm25
+from multipdf_chat.db import (
+    SessionLocal,
+    AsyncSessionLocal,
+    engine,
+    async_engine,
+)
 from multipdf_chat.helper import setup_logging, stream_user_input
 from multipdf_chat.models.userQuery import UserQuery
+from multipdf_chat.models.embedingPayload import CreateEmbeddingPayload
 
 import logging 
-import sys 
 import time 
 import uuid 
-from pythonjsonlogger import jsonlogger
+from contextlib import asynccontextmanager
+from multipdf_chat.logging_context import set_request_id
+from multipdf_chat.rerank import load_reranker
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        # Start up
+        app.state.db = SessionLocal
+        app.state.async_db = AsyncSessionLocal
+        app.state.embeddings = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            model_kwargs={"device": "cpu"}
+        )
+        app.state.reranker = load_reranker()
+        # Build BM25 once at startup
+        with SessionLocal() as db:
+            app.state.bm25 = build_bm25(db)
+            logger.info("bm25 built", extra={
+                "bm_chunks": len(app.state.bm25.parent_ids)
+            })
+
+        yield
+
+        await async_engine.dispose()
+        engine.dispose()
+    
+    finally:
+        # Shutdown/clean-up
+        app.state.db = None 
+        app.state.async_db = None
+        app.state.embeddings = None
+        app.state.bm25 = None
+        app.state.reranker = None
+
+
+app = FastAPI(lifespan=lifespan)
 
 setup_logging()
 
 logger = logging.getLogger("api")
 
 origins = [
-    "http://localhost:3000",  "http://localhost:5173"
+    "http://localhost:3000", "http://localhost:5173"
 ]
 
 app.add_middleware(
@@ -39,6 +80,8 @@ app.add_middleware(
 @app.middleware("http")
 async def logging_middleware(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    set_request_id(request_id) # any downstream code can now read it
+
     start_time = time.time()
 
     logger.info(
@@ -75,13 +118,13 @@ async def logging_middleware(request: Request, call_next):
     return response
     
 
-@app.on_event("startup")
-def load_models():
-    app.state.db = SessionLocal
-    app.state.embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"}
-    )
+# @app.on_event("startup")
+# def load_models():
+#     app.state.db = SessionLocal
+#     app.state.embeddings = HuggingFaceEmbeddings(
+#         model_name="sentence-transformers/all-MiniLM-L6-v2",
+#         model_kwargs={"device": "cpu"}
+#     )
 
 @app.get('/')
 def home():
@@ -91,6 +134,11 @@ def home():
 def uploadFile(request: Request, files: List[UploadFile] = File(...)):
     logger.info(f'Uploaded files: {files}')
     return upload_handler(files, request)
+
+@app.post('/create_embeddings')
+def createFileEmbeddings(payload: CreateEmbeddingPayload, request: Request):
+    logger.info(f'Embedding payload: {payload}')
+    return create_file_embeddings_handler(payload.doc_slugs, request)
 
 @app.post('/user_query')
 def userQuery(userQuery: UserQuery, request: Request):

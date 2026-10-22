@@ -1,7 +1,7 @@
 import asyncio
 import json
 import uuid
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, status
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from PyPDF2 import PdfReader
 # from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
@@ -23,17 +23,32 @@ from sqlalchemy import text
 import watchtower 
 import os 
 import io
+import logging
+import re
+from pathlib import Path
 from dotenv import load_dotenv
 from multipdf_chat.api.StreamingHandler import StreamingHandler
 from langchain.retrievers import ParentDocumentRetriever
 from langchain.storage import InMemoryStore
 from langchain.docstore.document import Document
+from multipdf_chat.rerank import rerank_async
+from multipdf_chat.retrieval import retrieve_async, retrieve_hybrid_async
+from multipdf_chat.logging_context import get_request_id
+import time
+
+from multipdf_chat.routing import route
 
 load_dotenv()
 
 S3_STORAGE_ENABLED = (
     os.getenv("S3_STORAGE_ENABLED", "false").lower() == "true"
 )
+
+DOCUMENT_STORAGE_ROOT = Path(os.getenv('DOCUMENT_STORAGE_ROOT', './srv'))
+
+logger = logging.getLogger("api")
+
+_log = logging.getLogger("routing")
 
 def setup_logging():
     handler = logging.StreamHandler(sys.stdout)
@@ -45,6 +60,14 @@ def setup_logging():
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
     root_logger.addHandler(handler)
+
+def get_pdf_text(storage_path: str) -> str:
+    pdf_path = f"{DOCUMENT_STORAGE_ROOT}/{storage_path}"
+    logger.info(f"DOCUMENT_STORAGE_ROOT: {DOCUMENT_STORAGE_ROOT}, storage_path = {storage_path}, PDF path: {pdf_path}")
+    reader = PdfReader(pdf_path)
+    return "\n".join(
+        page.extract_text() or "" for page in reader.pages 
+    )
 
 def get_pdf_texts(pdf_docs):
     text = ""
@@ -99,7 +122,118 @@ def get_text_chunks(text, type, request: Request):
 
 #     # put_metric('Embeddings generated', 1)
 
-def generate_embedding(request: Request, raw_text, session_id):
+def find_section(text_chunk: str) -> str | None:
+    """Extract a numbered section heading from the beginning of a parent chunk"""
+    # prefix = text_chunk[:400]
+    numbered = re.search(
+        # r'^\s*(\d+(?:\.\d+)*\s+[A-Z][^\n]+)',
+        r'^\s*(\d+(?:\.\d+)*\.?)\s+(.+)$',
+        text_chunk,
+        re.MULTILINE
+    )
+    if numbered: 
+        return numbered.group(0).strip()
+
+    return None
+
+def generate_embedding(request: Request, raw_text: str, doc_row, ingest_session_id: str):
+    embeddings = request.app.state.embeddings 
+    db = request.app.state.db() 
+
+    try:
+        # 1. Derive the slug and retrieve documents metadata 
+        # slug = filename.rsplit('.', 1)[0]
+        # doc_stmt = text("SELECT doc_id, product_line FROM documents WHERE slug = :slug")
+        # doc_row = db.execute(doc_stmt, {'slug': slug}).fetchone()
+
+        # if not doc_row:
+        #     raise HTTPException(
+        #         status_code=status.HTTP_400_BAD_REQUEST,
+        #         detail=f"Document with slug {slug} not found"
+        #     )
+
+        doc_id, title, product_line = doc_row['doc_id'], doc_row['title'], doc_row['product_line']
+
+        product_line_str = (', ').join(product_line) if isinstance(product_line, list) else str(product_line)        
+
+        # 2. Splitters and containers 
+        parent_splitter, child_splitter = get_parent_child_splitters(request)
+        parent_chunks = parent_splitter.split_text(raw_text)
+
+        parent_rows = []
+        child_rows = []
+
+        # 3. Process parent and children section headers with identity stamps 
+        for parent_chunk in parent_chunks:
+            parent_id = str(uuid.uuid4())
+            section_path = find_section(parent_chunk)
+            stamped_parent_content = f"[{title} | {product_line_str}]\n {parent_chunk}"
+
+            parent_rows.append({
+                "id": parent_id,
+                "doc_id": doc_id,
+                "content": stamped_parent_content,
+                "section_path": section_path,
+                "metadata": json.dumps({ "ingest_session_id": ingest_session_id })
+            })
+
+            # 4. Generate embeddings in a single batched call per document 
+            child_chunks = child_splitter.split_text(parent_chunk)
+
+            for child_chunk in child_chunks:
+
+                stamped_child_content = f"[{title} | {product_line_str}]\n {child_chunk}"
+
+                child_rows.append({
+                    "id": str(uuid.uuid4()),
+                    "parent_id": parent_id,
+                    "doc_id": doc_id,
+                    "product_line": product_line,
+                    "content": stamped_child_content,
+                    "section_path": section_path,
+                    # "embedding": "", # Created in bulk and set later
+                    "metadata": json.dumps({ "ingest_session_id": ingest_session_id })
+                })
+
+        # Generate child embeddings in one batch 
+        contents = [child_row['content'] for child_row in child_rows]
+        embeddings_list = embeddings.embed_documents(contents)
+
+        # Put embeddings back to the child_rows 
+        for child_row, embedding in zip(child_rows, embeddings_list):
+            child_row['embedding'] = str(embedding)
+
+        # Insert parent rows    
+        db.execute(
+            text("""
+                INSERT INTO parent_documents (id, doc_id, content, section_path, metadata) 
+                VALUES (:id, :doc_id, :content, :section_path, :metadata) 
+                """),
+            parent_rows
+        )                 
+
+        # Insert child rows 
+        db.execute(
+            text(
+                """
+                INSERT INTO child_chunks 
+                (id, parent_id, doc_id, product_line, content, embedding, section_path, metadata) 
+                VALUES (:id, :parent_id, :doc_id, :product_line, :content, :embedding, :section_path, :metadata)
+                """
+            ),
+            child_rows
+        )
+
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        raise e
+    finally:
+        db.close()
+
+
+def generate_embedding_upload(request: Request, raw_text, session_id):
     embeddings = request.app.state.embeddings
     db = request.app.state.db()
 
@@ -215,7 +349,7 @@ def get_conversational_chain(streaming=False, callbacks=None):
     """
 
     model = ChatGroq(
-        model="qwen/qwen3.6-27b", 
+        model="openai/gpt-oss-20b",
         groq_api_key=os.getenv('GROQ_API_KEY'),
         streaming=streaming,
         callbacks=callbacks
@@ -342,64 +476,76 @@ def user_input(user_question, session_id, request):
  Get top k child chunks -> Collect parent_ids 
  Fetch parent_documents -> Pass parent document to LangChain -> LLM Response 
 """
-async def stream_user_input(request: Request, user_question, session_id):
+async def stream_user_input(request: Request, user_question, product_line=None):
+    request_id = get_request_id()
     embeddings = request.app.state.embeddings 
-    db = request.app.state.db()
+    # db = request.app.state.db()
 
-    try:
-        # Generate Query embedding
-        query_embedding = embeddings.embed_query(user_question)
+    # try:
 
-        # Find nearest child chunks - order by cosine distance between stored embeddings and query embedding
-        result = db.execute(
-            text("""
-                SELECT parent_id FROM child_chunks 
-                WHERE metadata ->> 'session_id' = :session_id 
-                ORDER BY embedding <=> CAST(:embedding AS vector)
-                LIMIT 5
-            """),
-            {
-                "session_id": session_id,
-                "embedding": str(query_embedding)
-            }
+    async with request.app.state.async_db() as db:
+        # parents = await retrieve_async(db, embeddings, user_question, product_line, k=10)
+        parents = await retrieve_hybrid_async(
+            db, embeddings, request.app.state.bm25, 
+            user_question, product_line, k=20
         )
-        rows = result.fetchall() 
+        if parents and request.app.state.reranker is not None:
+            parents = await rerank_async(
+                request.app.state.reranker, user_question, parents, top_n=5,
+            )
 
-        if not rows: 
-            yield "No relevant data found"
-            return 
+        decision = route(user_question, parents, product_line)
 
-        # Store unique parent ids 
-        parent_ids = []
-        seen = set() 
-        for row in rows:
-            if row[0] not in seen:
-                seen.add(row[0])
-                parent_ids.append(row[0])
+        # One structured event per request — drives dashboards and alerting.
+        _log.info("routing_event", extra={
+            "request_id": request_id,
+            "status": decision.status,
+            "reason_code": decision.reason_code.value,
+            "decision.features": decision.features
+        })
 
-        # Fetch parent documents 
-        result = db.execute(
-            text("""
-            SELECT id, content FROM parent_documents 
-            WHERE id = ANY(:ids)
-            """),
-            { "ids": parent_ids }
-        )
+        if decision.status == "insufficient_evidence":
+            yield json.dumps({
+                "status": "insufficient_evidence",
+                "reason_code": decision.reason_code.value,
+                "reason": decision.reason,
+                "message": (
+                    "I don't have enough information in the policy documents "
+                    "to answer this confidently. Please provide more context "
+                    "(e.g., which product) or route to a human agent."
+                ),
+            })
+            return
+
+        if decision.status == "conflicting_sources":
+            yield json.dumps({
+                "status": "conflicting_sources",
+                "reason_code": decision.reason_code.value,
+                "reason": decision.reason,
+                "candidate_docs": sorted({p.doc_slug for p in parents[:3]}),
+                "message": (
+                    "The policies differ across products. Please clarify "
+                    "which product this ticket is about."
+                ),
+            })
+            return
 
         docs = [
             Document(
-                page_content = row[1],
-                metadata = {
-                    "id": str(row[0]),
-                    "session_id": session_id
+                page_content=p.content,
+                metadata={
+                    "id": p.parent_id,
+                    "doc_slug": p.doc_slug,
+                    "section_path": p.section_path
                 }
             )
-            for row in result.fetchall()
+            for p in parents
         ]
+        logger.info("generation_started", extra={
+            "request_id": request_id, "n_context_docs": len(docs),
+        })
 
-        if not docs: 
-            yield "No matching parent documents found"
-            return 
+        gen_start = time.perf_counter()
 
         # Stream response 
         handler = StreamingHandler()
@@ -408,31 +554,66 @@ async def stream_user_input(request: Request, user_question, session_id):
             streaming=True, 
             callbacks=[handler]
         )
-        asyncio.create_task(
-            chain.ainvoke(
-                {
-                    "input_documents": docs, 
-                    "question": user_question
-                },
-                config={
-                    "callbacks": [handler]
-                }
-            )
-        )
 
+        async def _run_chain():
+            try:
+                await chain.ainvoke(
+                    {
+                        "input_documents": docs, 
+                        "question": user_question
+                    },
+                    config={
+                        "callbacks": [handler]
+                    }
+                )
+            except Exception as e:
+                logger.error(
+                    "chain_failed",
+                    extra={"request_id": request_id, "error": str(e)},
+                        exc_info=True,
+                )
+                # await handler.queue.put(f"\n[Error: {str(e)}]")
+                await handler.queue.put(
+                    "\nSorry, I couldn't generate a response right now."
+                )
+            finally: 
+                await handler.queue.put(None)
+
+        # Store the task so we can cancel it on disconnect
+        gen_task = asyncio.create_task(_run_chain())
+
+        token_count = 0
         buffer = ""
-
         while True:
+            try:
+                # Non-blocking wait with timeout to check for disconnect
+                token = await asyncio.wait_for(
+                    handler.queue.get(), 
+                    timeout=0.5
+                )
+            except asyncio.TimeoutError:
+                # Check if the client disconnected 
+                if await request.is_disconnected():
+                    logger.info("client_disconnected", extra={
+                        "request_id": request_id,
+                        "tokens_sent": token_count,
+                    })
+                    gen_task.cancel() 
 
-            token = await handler.queue.get()
+                    try:
+                        await gen_task
+                    except asyncio.CancelledError:
+                        pass
+
+                    break 
+                continue
+
             if token is None:
                 break 
-
             if not token or token.isspace():
                 continue 
-
+            token_count += 1 # counter only — do NOT log per token
             buffer += token 
-
             if len(buffer) >= 20:
                 yield buffer 
                 buffer = "" 
@@ -440,8 +621,11 @@ async def stream_user_input(request: Request, user_question, session_id):
         if buffer:
             yield buffer 
 
-    finally: 
-        db.close()
+        logger.info("generation_completed", extra={
+            "request_id": request_id,
+            "duration_ms": round((time.perf_counter() - gen_start) * 1000),
+            "tokens": token_count,
+        })
 
 def upload_faiss_to_s3(folder):
     bucket_name = os.getenv('AWS_S3_UPLOAD_BUCKET')
