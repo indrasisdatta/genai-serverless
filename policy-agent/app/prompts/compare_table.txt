@@ -1,0 +1,6 @@
+Render the comparison table from the per-target Policy QA answers.
+
+Answers:
+{answers}
+
+Format as a clean Markdown table with columns: Question, Target 1, Target 2, Target 3.

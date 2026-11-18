@@ -1,0 +1,6 @@
+Comparison agent: call Policy QA once per target and produce a structured comparison table.
+
+Targets: {targets}
+Question: {question}
+
+Call Policy QA for each target in parallel using Send, then combine results into a comparison table.

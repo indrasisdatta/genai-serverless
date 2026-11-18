@@ -1,0 +1,5 @@
+# Week 9: Verifier seeded eval dataset
+
+# Each line: {"id": "...", "question": "...", "draft": "...", "expected_verdict": "pass|fail", "category": "..."}
+{"id": "v001", "question": "What is the late fee?", "draft": "The late fee is $7.", "expected_verdict": "pass", "category": "grounded"}
+{"id": "v002", "question": "What is the late fee?", "draft": "The late fee is $500.", "expected_verdict": "fail", "category": "hallucination"}

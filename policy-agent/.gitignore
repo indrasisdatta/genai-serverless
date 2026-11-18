@@ -1,0 +1,39 @@
+# .gitignore for policy-agent
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test output
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# Database
+*.db
+*.sqlite
+
+# Evaluation results (keep them, but ignore temp)
+evals/results/*.tmp

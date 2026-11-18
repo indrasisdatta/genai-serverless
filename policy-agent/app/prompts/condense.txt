@@ -1,0 +1,8 @@
+Condense the conversation into a standalone question.
+
+Chat history:
+{chat_history}
+
+Follow-up question: {question}
+
+Return a standalone question that incorporates the necessary context from the chat history.

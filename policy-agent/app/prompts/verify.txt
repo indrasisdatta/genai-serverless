@@ -1,0 +1,7 @@
+Verify the final draft against pooled sources using an independent check.
+
+Draft: {draft}
+Pooled sources: {sources}
+
+Check for hallucinations, unsupported claims, and contradictions.
+Return pass/fail with a short justification.

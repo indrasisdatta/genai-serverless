@@ -1,0 +1,9 @@
+Grade each retrieved chunk for relevance to the question.
+
+Question: {question}
+
+Chunks:
+{chunks}
+
+For each chunk, decide if it contains information relevant to answering the question.
+Return one grade entry per chunk with its index and a relevant flag.

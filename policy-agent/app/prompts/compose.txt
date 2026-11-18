@@ -1,0 +1,6 @@
+Compose the final answer from the verified draft and pooled sources.
+
+Draft: {draft}
+Sources: {sources}
+
+Return the final composed answer with citations.

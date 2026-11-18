@@ -1,0 +1,6 @@
+# Week 9: Router eval dataset
+
+# Each line: {"id": "...", "question": "...", "expected_route": "...", "category": "..."}
+{"id": "r001", "question": "What is the late fee?", "expected_route": "policy_qa", "category": "simple"}
+{"id": "r002", "question": "Which documents cover prepaid plans?", "expected_route": "catalog", "category": "metadata"}
+{"id": "r003", "question": "Compare late fees across wireless, prepaid, and Fios", "expected_route": "comparison", "category": "comparison"}

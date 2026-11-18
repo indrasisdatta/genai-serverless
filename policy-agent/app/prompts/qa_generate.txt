@@ -1,0 +1,12 @@
+Answer the question using ONLY the provided context.
+If the answer cannot be determined from the context, say so.
+
+Context:
+{context}
+
+Question: {question}
+
+Answer:
+
+Citations:
+{citations}

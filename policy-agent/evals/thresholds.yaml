@@ -1,0 +1,6 @@
+faithfulness: 0.85
+answer_correctness: 0.75
+hit_rate_at_5: 0.85
+router_accuracy: 0.90
+abstention_precision: 0.90
+p95_latency_seconds: 12

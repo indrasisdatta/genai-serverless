@@ -1,0 +1,7 @@
+Rewrite the question into a better search query.
+
+Original question: {question}
+Previous query: {query}
+Reason retrieval failed: {reason}
+
+Return a rewritten query that might find relevant information.
